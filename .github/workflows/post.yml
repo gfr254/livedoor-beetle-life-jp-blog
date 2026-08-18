@@ -1,0 +1,27 @@
+name: Post to Livedoor Blog
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 1 * * *"  # 毎日10:00 JST
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install deps
+        run: npm install playwright markdown-it
+
+      - name: Run post script
+        env:
+          LD_EMAIL: ${{ secrets.LD_EMAIL }}
+          LD_PASSWORD: ${{ secrets.LD_PASSWORD }}
+          POST_TITLE: "自動投稿テスト"
+        run: node playwright-post.js
