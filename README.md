@@ -1,0 +1,1 @@
+# livedoor-beetle-life-jp-blog
