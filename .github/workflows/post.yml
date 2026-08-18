@@ -17,7 +17,9 @@ jobs:
           node-version: 18
 
       - name: Install deps
-        run: npm install playwright markdown-it
+        run: |
+          npm install playwright markdown-it
+          npx playwright install --with-deps
 
       - name: Run post script
         env:
