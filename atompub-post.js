@@ -8,7 +8,7 @@ const md = new MarkdownIt();
    記事投稿（AtomPub）
 ----------------------------- */
 async function postArticle(title, html, username, password) {
-  const endpoint = "https://livedoor.blogcms.jp/atompub/beetle_life_jp_blog/entry";
+  const endpoint = "https://livedoor.blogcms.jp/atompub/beetle_life_jp_blog/article";
 
   const entryXml = `
   <entry xmlns="http://www.w3.org/2005/Atom">
