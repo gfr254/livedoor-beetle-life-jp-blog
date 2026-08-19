@@ -7,6 +7,17 @@ const md = new MarkdownIt();
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* -----------------------------
+   今日の日付を取得（YYYY-MM-DD）
+----------------------------- */
+function getToday() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/* -----------------------------
    AIタイトル生成（毎日変わる）
 ----------------------------- */
 async function generateTitle() {
@@ -78,11 +89,15 @@ async function main() {
   const username = process.env.LD_USER;
   const password = process.env.LD_ATOM_PASS;
 
-  console.log("=== AI記事投稿開始（タイトル＆本文自動生成） ===");
+  console.log("=== AI記事投稿開始（タイトルに日付入り） ===");
+
+  // 今日の日付
+  const today = getToday();
 
   // タイトル生成
   console.log("タイトル生成中...");
-  const title = await generateTitle();
+  const aiTitle = await generateTitle();
+  const title = `${today} ${aiTitle}`;
   console.log("タイトル:", title);
 
   // 本文生成
