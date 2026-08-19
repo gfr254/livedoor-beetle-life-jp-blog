@@ -13,7 +13,7 @@ async function uploadImage(imagePath, username, password) {
 
   const xml = await res.text();
 
-  // 公開用URLを取得
+  // 公開URL（ブログで表示されるURL）
   const publicUrlMatch = xml.match(/<link[^>]*rel="edit-media"[^>]*href="([^"]+)"/);
   if (publicUrlMatch) return publicUrlMatch[1];
 
