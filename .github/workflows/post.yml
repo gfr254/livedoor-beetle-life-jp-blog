@@ -3,25 +3,30 @@ name: Post to Livedoor Blog
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 1 * * *"
+    - cron: "0 1 * * *"   # 毎日 10:00 JST（例）
 
 jobs:
   post:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Install deps
-        run: npm install markdown-it node-fetch
+      - name: Install dependencies
+        run: |
+          npm install markdown-it
+          npm install openai
 
       - name: Run AtomPub post
         env:
           LD_USER: ${{ secrets.LD_USER }}
           LD_ATOM_PASS: ${{ secrets.LD_ATOM_PASS }}
-          POST_TITLE: "自動投稿テスト"
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          POST_TITLE: "AI自動投稿テスト"
         run: node atompub-post.js
