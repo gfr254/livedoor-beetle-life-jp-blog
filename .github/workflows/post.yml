@@ -3,7 +3,7 @@ name: Post to Livedoor Blog
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 1 * * *"  # 毎日10:00 JST
+    - cron: "0 1 * * *"
 
 jobs:
   post:
@@ -17,13 +17,11 @@ jobs:
           node-version: 18
 
       - name: Install deps
-        run: |
-          npm install playwright markdown-it
-          npx playwright install --with-deps
+        run: npm install markdown-it node-fetch
 
-      - name: Run post script
+      - name: Run AtomPub post
         env:
-          LD_EMAIL: ${{ secrets.LD_EMAIL }}
-          LD_PASSWORD: ${{ secrets.LD_PASSWORD }}
+          LD_USER: ${{ secrets.LD_USER }}
+          LD_ATOM_PASS: ${{ secrets.LD_ATOM_PASS }}
           POST_TITLE: "自動投稿テスト"
-        run: node playwright-post.js
+        run: node atompub-post.js

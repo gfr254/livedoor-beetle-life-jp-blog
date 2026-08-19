@@ -1,71 +1,41 @@
-const { chromium } = require('playwright');
-const fs = require('fs');
-const md = require('markdown-it')();
+import fetch from "node-fetch";
+import fs from "fs";
+import md from "markdown-it";
 
-async function tryLogin(page, email, password) {
-  const loginPages = [
-    'https://member.livedoor.com/login/',
-    'https://www.livedoor.com/login/',
-    'https://livedoor.blogcms.jp/login'
-  ];
+const markdown = md();
 
-  for (const url of loginPages) {
-    await page.goto(url, { waitUntil: 'networkidle' });
+async function postArticle() {
+  const endpoint = "https://livedoor.blogcms.jp/atompub/beetle_life_jp_blog/article";
 
-    // livedoor ID ログイン
-    if (await page.$('input[name="livedoor_id"]')) {
-      await page.fill('input[name="livedoor_id"]', email);
-      await page.fill('input[name="password"]', password);
-      await page.click('button[type="submit"]');
-      return true;
-    }
-
-    // livedoor.com ログイン
-    if (await page.$('#login_id')) {
-      await page.fill('#login_id', email);
-      await page.fill('#login_password', password);
-      await page.click('button[type="submit"]');
-      return true;
-    }
-
-    // blogcms.jp ログイン
-    if (await page.$('input[name="email"]')) {
-      await page.fill('input[name="email"]', email);
-      await page.fill('input[name="password"]', password);
-      await page.click('button[type="submit"]');
-      return true;
-    }
-  }
-
-  return false;
-}
-
-(async () => {
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-
-  const email = process.env.LD_EMAIL;
-  const password = process.env.LD_PASSWORD;
+  const username = process.env.LD_USER;        // livedoor ID
+  const password = process.env.LD_ATOM_PASS;   // AtomPub用パスワード
 
   const title = process.env.POST_TITLE;
-  const mdContent = fs.readFileSync('./post.md', 'utf-8');
-  const htmlContent = md.render(mdContent);
+  const mdContent = fs.readFileSync("./post.md", "utf-8");
+  const htmlContent = markdown.render(mdContent);
 
-  // ログイン試行
-  const loggedIn = await tryLogin(page, email, password);
+  const xml = `
+  <entry xmlns="http://www.w3.org/2005/Atom">
+    <title>${title}</title>
+    <content type="html"><![CDATA[${htmlContent}]]></content>
+  </entry>
+  `;
 
-  if (!loggedIn) {
-    throw new Error('ログインフォームが見つかりませんでした（livedoor 側のリダイレクトが原因）');
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/atom+xml",
+      "Authorization": "Basic " + Buffer.from(`${username}:${password}`).toString("base64")
+    },
+    body: xml
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error("投稿失敗: " + text);
   }
 
-  // CMS マイページへ遷移
-  await page.waitForTimeout(5000); // セッション確立待ち
-  await page.goto('https://livedoor.blogcms.jp/blog/beetle_life_jp_blog/article');
+  console.log("投稿成功");
+}
 
-  await page.fill('#article_title', title);
-  await page.fill('#article_body', htmlContent);
-
-  await page.click('#article_publish');
-
-  await browser.close();
-})();
+postArticle();
