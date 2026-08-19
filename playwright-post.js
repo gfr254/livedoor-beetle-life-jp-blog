@@ -2,6 +2,44 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const md = require('markdown-it')();
 
+async function tryLogin(page, email, password) {
+  const loginPages = [
+    'https://member.livedoor.com/login/',
+    'https://www.livedoor.com/login/',
+    'https://livedoor.blogcms.jp/login'
+  ];
+
+  for (const url of loginPages) {
+    await page.goto(url, { waitUntil: 'networkidle' });
+
+    // livedoor ID ログイン
+    if (await page.$('input[name="livedoor_id"]')) {
+      await page.fill('input[name="livedoor_id"]', email);
+      await page.fill('input[name="password"]', password);
+      await page.click('button[type="submit"]');
+      return true;
+    }
+
+    // livedoor.com ログイン
+    if (await page.$('#login_id')) {
+      await page.fill('#login_id', email);
+      await page.fill('#login_password', password);
+      await page.click('button[type="submit"]');
+      return true;
+    }
+
+    // blogcms.jp ログイン
+    if (await page.$('input[name="email"]')) {
+      await page.fill('input[name="email"]', email);
+      await page.fill('input[name="password"]', password);
+      await page.click('button[type="submit"]');
+      return true;
+    }
+  }
+
+  return false;
+}
+
 (async () => {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
@@ -13,23 +51,15 @@ const md = require('markdown-it')();
   const mdContent = fs.readFileSync('./post.md', 'utf-8');
   const htmlContent = md.render(mdContent);
 
-  // livedoor ID ログインページへ
-  await page.goto('https://member.livedoor.com/login/', { waitUntil: 'networkidle' });
+  // ログイン試行
+  const loggedIn = await tryLogin(page, email, password);
 
-  // ログインフォームが出るまで待つ
-  await page.waitForSelector('input[name="livedoor_id"]', { timeout: 60000 });
+  if (!loggedIn) {
+    throw new Error('ログインフォームが見つかりませんでした（livedoor 側のリダイレクトが原因）');
+  }
 
-  // ログイン情報入力
-  await page.fill('input[name="livedoor_id"]', email);
-  await page.fill('input[name="password"]', password);
-
-  // ログインボタン押下
-  await page.click('button[type="submit"]');
-
-  // ログイン後の CMS マイページへ遷移するまで待つ
-  await page.waitForURL('https://livedoor.blogcms.jp/member', { timeout: 60000 });
-
-  // 記事投稿ページへ移動
+  // CMS マイページへ遷移
+  await page.waitForTimeout(5000); // セッション確立待ち
   await page.goto('https://livedoor.blogcms.jp/blog/beetle_life_jp_blog/article');
 
   await page.fill('#article_title', title);
