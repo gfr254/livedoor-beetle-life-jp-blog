@@ -8,15 +8,20 @@ async function generateImage(prompt) {
     format: "jpeg"   // livedoor対応
   });
 
-  // 最新仕様：jpeg形式は base64 で返る
-  const base64 = img.data[0].b64_json;
-
-  if (!base64) {
-    throw new Error("OpenAI が base64 JPEG を返しませんでした");
+  // まず URL を確認（2026年の標準）
+  if (img.data[0].url) {
+    const res = await fetch(img.data[0].url);
+    const buffer = Buffer.from(await res.arrayBuffer());
+    fs.writeFileSync("image.jpg", buffer);
+    return "image.jpg";
   }
 
-  const buffer = Buffer.from(base64, "base64");
-  fs.writeFileSync("image.jpg", buffer);
+  // URLが無い場合は base64 を使う（旧仕様）
+  if (img.data[0].b64_json) {
+    const buffer = Buffer.from(img.data[0].b64_json, "base64");
+    fs.writeFileSync("image.jpg", buffer);
+    return "image.jpg";
+  }
 
-  return "image.jpg";
+  throw new Error("OpenAI が画像データを返しませんでした");
 }
