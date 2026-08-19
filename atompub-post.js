@@ -4,15 +4,12 @@ async function generateImage(prompt) {
   const img = await client.images.generate({
     model: "gpt-image-1",
     prompt,
-    size: "1024x1024"
+    size: "1024x1024",
+    format: "jpeg"   // ← livedoor対応のJPEG形式で生成
   });
 
-  // 最新仕様：画像URLで返ってくる
-  const imageUrl = img.data[0].url;
-
-  // URLから画像をダウンロードして保存
-  const res = await fetch(imageUrl);
-  const buffer = Buffer.from(await res.arrayBuffer());
+  const base64 = img.data[0].b64_json;
+  const buffer = Buffer.from(base64, "base64");
 
   fs.writeFileSync("image.jpg", buffer);
   return "image.jpg";
