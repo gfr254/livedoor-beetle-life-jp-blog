@@ -1,8 +1,6 @@
-import fetch from "node-fetch";
-import fs from "fs";
-import md from "markdown-it";
-
-const markdown = md();
+const fetch = require("node-fetch");
+const fs = require("fs");
+const md = require("markdown-it")();
 
 async function postArticle() {
   const endpoint = "https://livedoor.blogcms.jp/atompub/beetle_life_jp_blog/article";
@@ -12,7 +10,7 @@ async function postArticle() {
 
   const title = process.env.POST_TITLE;
   const mdContent = fs.readFileSync("./post.md", "utf-8");
-  const htmlContent = markdown.render(mdContent);
+  const htmlContent = md.render(mdContent);
 
   const xml = `
   <entry xmlns="http://www.w3.org/2005/Atom">
