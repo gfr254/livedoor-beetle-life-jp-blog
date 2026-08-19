@@ -1,8 +1,46 @@
 import fs from "fs";
 import fetch from "node-fetch";
 import MarkdownIt from "markdown-it";
+import OpenAI from "openai";
 
 const md = new MarkdownIt();
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+/* -----------------------------
+   AIタイトル生成（毎日変わる）
+----------------------------- */
+async function generateTitle() {
+  const prompt = `
+あなたは「空冷ビートルと暮らす毎日の物語」をテーマにしたブログのタイトルを作るAIです。
+今日の出来事として自然で魅力的なタイトルを1つだけ生成してください。
+30文字以内、日本語。
+`;
+
+  const result = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: prompt }]
+  });
+
+  return result.choices[0].message.content.trim();
+}
+
+/* -----------------------------
+   AI本文生成（毎日変わる）
+----------------------------- */
+async function generateArticle() {
+  const prompt = `
+あなたは「空冷ビートルと暮らす毎日の物語」をテーマにしたブログ記事を毎日書くAIです。
+今日の出来事として自然な短いストーリーをMarkdownで書いてください。
+タイトルは含めず本文のみでOK。
+`;
+
+  const result = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: prompt }]
+  });
+
+  return result.choices[0].message.content;
+}
 
 /* -----------------------------
    記事投稿（AtomPub）
@@ -39,12 +77,18 @@ async function postArticle(title, html, username, password) {
 async function main() {
   const username = process.env.LD_USER;
   const password = process.env.LD_ATOM_PASS;
-  const title = process.env.POST_TITLE || "AI自動投稿";
 
-  console.log("=== AI記事投稿開始（画像なし） ===");
+  console.log("=== AI記事投稿開始（タイトル＆本文自動生成） ===");
 
-  // Markdown本文読み込み
-  const mdText = fs.readFileSync("./post.md", "utf-8");
+  // タイトル生成
+  console.log("タイトル生成中...");
+  const title = await generateTitle();
+  console.log("タイトル:", title);
+
+  // 本文生成
+  console.log("本文生成中...");
+  const mdText = await generateArticle();
+  console.log("本文生成完了");
 
   // Markdown → HTML
   const html = md.render(mdText);
