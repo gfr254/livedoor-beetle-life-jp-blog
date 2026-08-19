@@ -1,36 +1,31 @@
 import fs from "fs";
 import md from "markdown-it";
 import OpenAI from "openai";
+import sharp from "sharp";
 
 const markdown = md();
 
-// AI画像生成（URL優先＋JPEG対応）
+// AI画像生成（PNG → JPEG 変換）
 async function generateImage(prompt) {
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const img = await client.images.generate({
     model: "gpt-image-1",
     prompt,
-    size: "1024x1024",
-    format: "jpeg"   // livedoor が受け付ける唯一の形式
+    size: "1024x1024"
   });
 
-  // まず URL を使う（2026年の標準）
-  if (img.data[0].url) {
-    const res = await fetch(img.data[0].url);
-    const buffer = Buffer.from(await res.arrayBuffer());
-    fs.writeFileSync("image.jpg", buffer);
-    return "image.jpg";
-  }
+  // PNG の base64 を取得
+  const base64 = img.data[0].b64_json;
+  if (!base64) throw new Error("OpenAI が画像データを返しませんでした");
 
-  // URL が無い場合は base64（旧仕様）
-  if (img.data[0].b64_json) {
-    const buffer = Buffer.from(img.data[0].b64_json, "base64");
-    fs.writeFileSync("image.jpg", buffer);
-    return "image.jpg";
-  }
+  const pngBuffer = Buffer.from(base64, "base64");
 
-  throw new Error("OpenAI が画像データを返しませんでした");
+  // livedoor が受け付ける JPEG に変換
+  const jpegBuffer = await sharp(pngBuffer).jpeg().toBuffer();
+
+  fs.writeFileSync("image.jpg", jpegBuffer);
+  return "image.jpg";
 }
 
 // livedoor 画像アップロード
@@ -63,11 +58,10 @@ async function postArticle() {
   const mdContent = fs.readFileSync("./post.md", "utf-8");
   let htmlContent = markdown.render(mdContent);
 
-  // AI画像生成
+  // AI画像生成（PNG→JPEG変換済み）
   const imagePath = await generateImage("空冷ビートルの夏の風景");
   const imageUrl = await uploadImage(imagePath, username, password);
 
-  // 本文に画像挿入
   htmlContent = `<img src="${imageUrl}" /><br>` + htmlContent;
 
   const xml = `
@@ -93,7 +87,7 @@ async function postArticle() {
   console.log("投稿成功");
 }
 
-// 例外を確実にログに出す
+// エラーを確実にログに出す
 postArticle().catch(err => {
   console.error("エラー:", err);
   process.exit(1);
