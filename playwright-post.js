@@ -13,22 +13,19 @@ const md = require('markdown-it')();
   const mdContent = fs.readFileSync('./post.md', 'utf-8');
   const htmlContent = md.render(mdContent);
 
-  // livedoor Blog CMS ログイン
-  await page.goto('https://livedoor.blogcms.jp/login');
-  await page.fill('#login_id', email);
-  await page.fill('#login_password', password);
+  // livedoor 新ログインページ
+  await page.goto('https://member.livedoor.com/login/');
+
+  await page.fill('input[name="livedoor_id"]', email);
+  await page.fill('input[name="password"]', password);
   await page.click('button[type="submit"]');
 
-  // 新規記事作成ページへ移動
+  // CMS 管理画面へ遷移
   await page.goto('https://livedoor.blogcms.jp/blog/beetle_life_jp_blog/article');
 
-  // タイトル入力
   await page.fill('#article_title', title);
-
-  // 本文（HTML）入力
   await page.fill('#article_body', htmlContent);
 
-  // 公開ボタン
   await page.click('#article_publish');
 
   await browser.close();
