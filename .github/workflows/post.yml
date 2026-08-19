@@ -3,7 +3,7 @@ name: Post to Livedoor Blog
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 1 * * *"   # 毎日 10:00 JST（例）
+    - cron: "0 1 * * *"
 
 jobs:
   post:
