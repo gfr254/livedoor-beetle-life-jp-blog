@@ -1,8 +1,13 @@
 {
+  "name": "livedoor-beetle-life-jp-blog",
+  "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "generate": "node generate.js",
+    "post": "node atompub-post.js"
+  },
   "dependencies": {
-    "markdown-it": "^14.0.0",
-    "openai": "^4.0.0",
-    "sharp": "^0.33.0"
+    "axios": "^1.6.0",
+    "openai": "^4.0.0"
   }
 }

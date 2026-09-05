@@ -1,0 +1,37 @@
+{
+  "title": "【空冷ビートル】{{AI_TITLE}}｜藤岡・群馬の旧車ライフ",
+  "category": "旧車",
+  "tags": ["空冷ビートル", "旧車", "フォルクスワーゲン", "整備", "旅", "群馬", "藤岡"],
+  "images": [
+    {
+      "alt": "空冷ビートル 全景写真",
+      "description": "{{AI_IMAGE_DESCRIPTION_1}}"
+    },
+    {
+      "alt": "空冷ビートル 整備記録",
+      "description": "{{AI_IMAGE_DESCRIPTION_2}}"
+    }
+  ],
+  "body": [
+    {
+      "section_title": "🚗 今日の空冷ビートル",
+      "content": "{{AI_SECTION_SITUATION}}"
+    },
+    {
+      "section_title": "🔧 原因と対処（整備ログ）",
+      "content": "{{AI_SECTION_MAINTENANCE}}"
+    },
+    {
+      "section_title": "🌿 旧車ライフの気づき",
+      "content": "{{AI_SECTION_LEARNING}}"
+    },
+    {
+      "section_title": "📍 藤岡・群馬のおすすめスポット",
+      "content": "{{AI_SECTION_LOCAL_SPOT}}"
+    },
+    {
+      "section_title": "🔗 関連記事",
+      "content": "{{AI_SECTION_INTERNAL_LINKS}}"
+    }
+  ]
+}
