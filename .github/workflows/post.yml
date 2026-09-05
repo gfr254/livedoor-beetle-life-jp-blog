@@ -2,7 +2,7 @@ name: Auto Post to Livedoor Blog
 
 on:
   schedule:
-    - cron: "0 7 * * *"   # 毎朝7時に投稿
+    - cron: "0 7 * * *"
   workflow_dispatch:
 
 jobs:
@@ -21,10 +21,12 @@ jobs:
 
       - name: Generate article
         run: node generate.js
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Post to Livedoor
         run: node atompub-post.js
         env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           LIVEDOOR_ID: ${{ secrets.LIVEDOOR_ID }}
           LIVEDOOR_API_KEY: ${{ secrets.LIVEDOOR_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
