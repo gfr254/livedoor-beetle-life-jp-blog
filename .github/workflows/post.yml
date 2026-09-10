@@ -28,5 +28,5 @@ jobs:
         run: node atompub-post.js
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          LIVEDOOR_ID: ${{ secrets.LIVEDOOR_ID }}
-          LIVEDOOR_API_KEY: ${{ secrets.LIVEDOOR_API_KEY }}
+          LD_USER: ${{ secrets.LD_USER }}
+          LD_ATOM_PASS: ${{ secrets.LD_ATOM_PASS }}
