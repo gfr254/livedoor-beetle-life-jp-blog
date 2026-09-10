@@ -41,7 +41,7 @@ async function postArticle() {
 </entry>
 `;
 
-  const url = `https://livedoor.blogcms.jp/atom/${LD_USER}/article`;
+  const url = `https://livedoor.blogcms.jp/atom/beetle_life_jp_blog/article`;
 
   try {
     const res = await axios.post(url, xml, {
