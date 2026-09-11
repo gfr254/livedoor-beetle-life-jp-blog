@@ -8,7 +8,7 @@ const AUTH = "Basic " + Buffer.from(
   process.env.LD_USER + ":" + process.env.LD_PASSWORD
 ).toString("base64");
 
-// livedoor 投稿（多言語対応）
+// livedoor 投稿
 async function postLivedoor(title, html) {
   const xml = `
   <entry xmlns="http://www.w3.org/2005/Atom">
@@ -31,22 +31,49 @@ async function postLivedoor(title, html) {
 }
 
 // ===============================
-// ★ livedoor 本文構造 最強版（完全強化）
+// ★ livedoor 本文構造＋meta＋内部リンク＋藤岡市SEO 最強版
 // ===============================
 function buildHtmlMulti(post) {
   let html = "";
 
+  // ===============================
+  // ★ meta description（藤岡市ローカルSEO強化）
+  // ===============================
+  const metaDescription = `
+空冷ビートルの「${post.title_ja}」について、群馬県藤岡市で実際に起きた整備・トラブル・走行記録を詳しく解説。藤岡市の道路事情や山道の特徴を踏まえ、原因・対処法・手順を分かりやすくまとめています。
+  `.trim();
+
+  html += `
+    <meta name="description" content="${metaDescription}">
+    <meta property="og:title" content="${post.title_ja}">
+    <meta property="og:description" content="${metaDescription}">
+    <meta property="og:image" content="${post.image.url}">
+    <meta property="og:type" content="article">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${post.title_ja}">
+    <meta name="twitter:description" content="${metaDescription}">
+    <meta name="twitter:image" content="${post.image.url}">
+  `;
+
+  // ===============================
   // ★タイトル（H1）
+  // ===============================
   html += `<h1 class="article-title">${post.title_ja}</h1>`;
 
-  // ★リード文（検索意図に直撃）
+  // ===============================
+  // ★リード文（藤岡市ローカルSEO）
+  // ===============================
   html += `
     <div class="lead">
-      <p>空冷ビートルの整備・トラブル・旅の記録を藤岡市（群馬県）から発信しています。今回のテーマは「${post.title_ja}」です。</p>
+      <p>群馬県藤岡市で空冷ビートルと暮らす私が、実体験をもとに整備・トラブル・旅の記録をまとめています。今回のテーマは「${post.title_ja}」です。</p>
+      <p>藤岡市は山道・農道・市街地が混在しており、空冷ビートルの走行環境として特徴的です。この地域性を踏まえて解説します。</p>
     </div>
   `;
 
+  // ===============================
   // ★画像（ALT多言語）
+  // ===============================
   html += `
     <div class="article-image">
       <img src="${post.image.url}"
@@ -55,9 +82,9 @@ function buildHtmlMulti(post) {
     </div>
   `;
 
-  // ============================
+  // ===============================
   // 🇯🇵 日本語（SEOメイン）
-  // ============================
+  // ===============================
   html += `<h2>🇯🇵 日本語（メイン記事）</h2>`;
 
   for (const sec of post.body_ja) {
@@ -69,12 +96,29 @@ function buildHtmlMulti(post) {
     `;
   }
 
-  // ============================
-  // 内部リンク（構造化）
-  // ============================
+  // ===============================
+  // ★藤岡市ローカルSEOセクション（追加）
+  // ===============================
+  html += `
+    <section class="local-seo">
+      <h2>📍 群馬県藤岡市の道路環境と空冷ビートル</h2>
+      <p>藤岡市は、空冷ビートルにとって以下のような特徴的な走行環境があります：</p>
+      <ul>
+        <li>山道が多く、キャブ車の負荷が高くなりやすい</li>
+        <li>農道・林道が多く、路面の凹凸で振動トラブルが起きやすい</li>
+        <li>市街地は信号が多く、アイドリング調整が重要</li>
+        <li>冬場は冷え込みが強く、チョーク調整が必要</li>
+      </ul>
+      <p>これらの地域特性を踏まえると、空冷ビートルの整備ポイントがより明確になります。</p>
+    </section>
+  `;
+
+  // ===============================
+  // ★内部リンク（強化版）
+  // ===============================
   html += `
     <section class="related-links">
-      <h2>🔗 関連記事</h2>
+      <h2>🔗 関連記事（藤岡市の実体験）</h2>
       <ul>
         ${post.body_ja[6].content
           .split("\n")
@@ -84,11 +128,9 @@ function buildHtmlMulti(post) {
     </section>
   `;
 
-  // ============================
+  // ===============================
   // 多言語本文（補助的SEO）
-  // ============================
-
-  // 英語
+  // ===============================
   html += `<h2>🇺🇸 English</h2>`;
   for (const sec of post.body_en) {
     html += `
@@ -99,7 +141,6 @@ function buildHtmlMulti(post) {
     `;
   }
 
-  // スペイン語
   html += `<h2>🇪🇸 Español</h2>`;
   for (const sec of post.body_es) {
     html += `
@@ -110,7 +151,6 @@ function buildHtmlMulti(post) {
     `;
   }
 
-  // 韓国語
   html += `<h2>🇰🇷 한국어</h2>`;
   for (const sec of post.body_ko) {
     html += `
@@ -121,13 +161,14 @@ function buildHtmlMulti(post) {
     `;
   }
 
-  // ============================
+  // ===============================
   // 著者情報（E-E-A-T最強化）
-  // ============================
+  // ===============================
   html += `
     <section class="author-box">
-      <h3>👤 著者：かずひろ（藤岡市）</h3>
-      <p>空冷ビートルと暮らす群馬県藤岡市の旧車ブロガー。整備・トラブル・旅の記録を毎日自動投稿しています。</p>
+      <h3>👤 著者：かずひろ（群馬県藤岡市）</h3>
+      <p>空冷ビートルと暮らす藤岡市の旧車ブロガー。整備・トラブル・旅の記録を毎日自動投稿しています。</p>
+      <p>藤岡市の道路環境に合わせた整備ポイントや走行記録を中心に発信しています。</p>
     </section>
   `;
 
@@ -142,7 +183,6 @@ async function main() {
 
   const htmlMulti = buildHtmlMulti(post);
 
-  // livedoor 投稿（タイトルは日本語）
   const finalTitle = `【空冷ビートル】${post.title_ja}`;
   await postLivedoor(finalTitle, htmlMulti);
 }
