@@ -61,7 +61,7 @@ Choose only from this list:
 
 - maintenance
 - beetle-life
-- travel-drive
+- traveldrive
 - beetle-knowledge
 - diy-custom
 - gallery
