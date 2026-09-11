@@ -35,10 +35,11 @@ function pickRandomImageUrl() {
   return list[idx];
 }
 
-// livedoorカテゴリID取得（不可視文字・全角ハイフン対策）
+// livedoorカテゴリID取得（なければ自動作成）
 async function getCategoryId(name) {
   name = name.trim().toLowerCase();
 
+  // 既存カテゴリ一覧を取得
   const xml = await fetch(`${BASE}/category`, {
     headers: { "Authorization": AUTH }
   }).then(r => r.text());
@@ -46,28 +47,60 @@ async function getCategoryId(name) {
   const xmlLower = xml.toLowerCase();
 
   // 部分一致で検索（不可視文字対策）
-  const match = xmlLower.match(
+  let match = xmlLower.match(
     new RegExp(`<category term="(\\d+)" label="[^"]*${name}[^"]*"`)
   );
 
-  return match ? match[1] : null;
+  if (match) {
+    return match[1]; // 既存カテゴリID
+  }
+
+  // ★カテゴリが存在しない → 新規作成
+  console.log("カテゴリが存在しないため新規作成します:", name);
+
+  const createXml = `
+  <entry xmlns="http://www.w3.org/2005/Atom">
+    <category label="${name}" />
+  </entry>
+  `;
+
+  const res = await fetch(`${BASE}/category`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/atom+xml;type=entry",
+      "Authorization": AUTH
+    },
+    body: createXml
+  });
+
+  const created = await res.text();
+  const createdLower = created.toLowerCase();
+
+  // 新規作成されたカテゴリIDを抽出
+  match = createdLower.match(/<category term="(\d+)" label="/);
+  if (match) {
+    console.log("新規カテゴリ作成成功:", name, "ID:", match[1]);
+    return match[1];
+  }
+
+  console.log("カテゴリ作成に失敗しました:", name);
+  return null;
 }
 
 // AI にカテゴリを選ばせる（英語カテゴリ）
 async function pickCategory(article) {
   const prompt = `
 Read the following article and choose ONE best category name in English.
-Choose only from this list:
+Choose only from this list (return EXACTLY one of them):
 
-- maintenance
-- beetle-life
-- traveldrive
-- beetle-knowledge
-- diy-custom
-- gallery
+maintenance
+beetle-life
+traveldrive
+beetle-knowledge
+diy-custom
+gallery
 
 Return ONLY the category name.
-
 Article:
 ${article}
   `;
@@ -117,16 +150,11 @@ async function main() {
   const categoryName = await pickCategory(yml.body_ja);
   console.log("AI選択カテゴリ:", categoryName);
 
-  // livedoorカテゴリID取得
+  // livedoorカテゴリID取得（なければ自動作成）
   const catId = await getCategoryId(categoryName);
 
-  // ★ nullカテゴリ完全防止チェック
   if (!catId) {
-    console.log("カテゴリが livedoor に存在しません:", categoryName);
-    console.log("livedoor 側のカテゴリ名を英語で手入力し直してください。");
-    console.log("投稿は中止されました（nullカテゴリ防止）。");
-    console.log("travel-drive".split("").map(c => c.charCodeAt(0)));
-
+    console.log("カテゴリIDが取得できませんでした:", categoryName);
     return;
   }
 
