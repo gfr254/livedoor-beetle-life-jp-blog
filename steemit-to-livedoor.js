@@ -35,18 +35,21 @@ function pickRandomImageUrl() {
   return list[idx];
 }
 
-// livedoorカテゴリID取得（nullカテゴリ防止版）
+// livedoorカテゴリID取得（不可視文字・全角ハイフン対策）
 async function getCategoryId(name) {
-  name = name.trim().toLowerCase(); // 正規化
+  name = name.trim().toLowerCase();
 
   const xml = await fetch(`${BASE}/category`, {
     headers: { "Authorization": AUTH }
   }).then(r => r.text());
 
-  // 小文字比較のために XML を小文字化
   const xmlLower = xml.toLowerCase();
 
-  const match = xmlLower.match(new RegExp(`<category term="(\\d+)" label="${name}"`));
+  // 部分一致で検索（不可視文字対策）
+  const match = xmlLower.match(
+    new RegExp(`<category term="(\\d+)" label="[^"]*${name}[^"]*"`)
+  );
+
   return match ? match[1] : null;
 }
 
@@ -120,7 +123,7 @@ async function main() {
   // ★ nullカテゴリ完全防止チェック
   if (!catId) {
     console.log("カテゴリが livedoor に存在しません:", categoryName);
-    console.log("livedoor 側のカテゴリ名を英語に変更してください。");
+    console.log("livedoor 側のカテゴリ名を英語で手入力し直してください。");
     console.log("投稿は中止されました（nullカテゴリ防止）。");
     return;
   }
