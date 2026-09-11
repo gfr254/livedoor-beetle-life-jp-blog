@@ -48,19 +48,19 @@ async function getCategoryId(name) {
 // AI にカテゴリを選ばせる
 async function pickCategory(article) {
   const prompt = `
-以下の記事内容を読み、最適なカテゴリー名を1つだけ返してください。
-選択肢は次の中から選んでください：
+Read the following article and choose ONE best category name in English.
+Choose only from this list:
 
-- 整備・メンテナンス
-- ビートルのある生活
-- 旅・ドライブ記録
-- 空冷ビートル豆知識
-- DIY・カスタム
-- 写真ギャラリー
+- maintenance
+- beetle-life
+- travel-drive
+- beetle-knowledge
+- diy-custom
+- gallery
 
-カテゴリー名だけを返してください。
+Return ONLY the category name.
 
-記事内容：
+Article:
 ${article}
   `;
 
