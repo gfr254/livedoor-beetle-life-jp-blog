@@ -29,4 +29,5 @@ jobs:
         env:
           LD_USER: ${{ secrets.LD_USER }}
           LD_PASSWORD: ${{ secrets.LD_PASSWORD }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: node steemit-to-livedoor.js
