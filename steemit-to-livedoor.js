@@ -1,12 +1,17 @@
 import fs from "fs";
 import { load } from "js-yaml";
 import fetch from "node-fetch";
+import OpenAI from "openai";
 
 const BLOG_NAME = "beetle_life_jp_blog";
 const BASE = `https://livedoor.blogcms.jp/atompub/${BLOG_NAME}`;
 const AUTH = "Basic " + Buffer.from(
   process.env.LD_USER + ":" + process.env.LD_PASSWORD
 ).toString("base64");
+
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 // 本文整形
 function beetleHtml(bodyJa) {
@@ -30,7 +35,7 @@ function pickRandomImageUrl() {
   return list[idx];
 }
 
-// カテゴリID取得
+// livedoorカテゴリID取得
 async function getCategoryId(name) {
   const xml = await fetch(`${BASE}/category`, {
     headers: { "Authorization": AUTH }
@@ -38,6 +43,33 @@ async function getCategoryId(name) {
 
   const match = xml.match(new RegExp(`<category term="(\\d+)" label="${name}"`));
   return match ? match[1] : null;
+}
+
+// AI にカテゴリを選ばせる
+async function pickCategory(article) {
+  const prompt = `
+以下の記事内容を読み、最適なカテゴリー名を1つだけ返してください。
+選択肢は次の中から選んでください：
+
+- 整備・メンテナンス
+- ビートルのある生活
+- 旅・ドライブ記録
+- 空冷ビートル豆知識
+- DIY・カスタム
+- 写真ギャラリー
+
+カテゴリー名だけを返してください。
+
+記事内容：
+${article}
+  `;
+
+  const res = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: prompt }]
+  });
+
+  return res.choices[0].message.content.trim();
 }
 
 // 記事投稿
@@ -66,15 +98,22 @@ async function postArticle(title, html, categoryId) {
 async function main() {
   const yml = load(fs.readFileSync("post.yml", "utf-8"));
 
+  // 本文整形
   let bodyHtml = beetleHtml(yml.body_ja);
 
-  // livedoorにアップ済み画像をランダム挿入
+  // livedoor画像ランダム挿入
   const imgUrl = pickRandomImageUrl();
   if (imgUrl) {
     bodyHtml += `<p><img src="${imgUrl}" /></p>`;
   }
 
-  const catId = await getCategoryId(yml.category);
+  // AI にカテゴリを選ばせる
+  const categoryName = await pickCategory(yml.body_ja);
+  console.log("AI選択カテゴリ:", categoryName);
+
+  // livedoorカテゴリID取得
+  const catId = await getCategoryId(categoryName);
+
   await postArticle(yml.title_ja, bodyHtml, catId);
 }
 
