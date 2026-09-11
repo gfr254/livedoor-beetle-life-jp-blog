@@ -1,11 +1,14 @@
-name: Fetch Editor HTML
+name: Auto Livedoor Beetle Blog
 
 on:
+  schedule:
+    - cron: "0 0 9 * * *"
   workflow_dispatch:
 
 jobs:
-  fetch:
+  post:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -14,14 +17,16 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install deps
+        run: npm install node-fetch js-yaml openai
 
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+      - name: Generate post.yml (OpenAI)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node generate-post.js
 
-      - name: Fetch editor HTML
-        run: node fetch-editor-html.js
+      - name: Post to Livedoor
         env:
           LD_USER: ${{ secrets.LD_USER }}
-          LD_PASSWORD: ${{ secrets.LD_PASSWORD }}
+          LD_ATOM_PASS: ${{ secrets.LD_ATOM_PASS }}
+        run: node steemit-to-livedoor.js
