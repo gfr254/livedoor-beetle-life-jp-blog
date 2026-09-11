@@ -125,6 +125,8 @@ async function main() {
     console.log("カテゴリが livedoor に存在しません:", categoryName);
     console.log("livedoor 側のカテゴリ名を英語で手入力し直してください。");
     console.log("投稿は中止されました（nullカテゴリ防止）。");
+    console.log("travel-drive".split("").map(c => c.charCodeAt(0)));
+
     return;
   }
 
