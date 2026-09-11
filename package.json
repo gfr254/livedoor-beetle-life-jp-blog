@@ -1,0 +1,10 @@
+{
+  "name": "livedoor-beetle-life-jp-blog",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "node-fetch": "^3.3.2",
+    "openai": "^4.0.0"
+  }
+}

@@ -1,19 +1,20 @@
 # livedoor-beetle-life-jp-blog  
 空冷ビートルの生活・整備・旅をテーマにした **livedoorブログ自動投稿システム**です。  
-GitHub Actions と OpenAI を使い、毎朝自動で記事を生成・投稿します。
+OpenAI と GitHub Actions を使い、毎日自動で記事を生成し、  
+images フォルダの画像を 1 枚ランダム選出して livedoor に投稿します。
 
 ---
 
-## 🚗 概要  
-このリポジトリは、以下の処理を自動で行います：
+## 🚗 概要
 
-1. **AIが記事を生成（generate.js）**  
-2. **SEO構造に沿った JSON を作成（template.json）**  
-3. **livedoorブログへ AtomPub API で投稿（atompub-post.js）**  
-4. **GitHub Actions が毎朝7時に自動投稿（post.yml）**
+このリポジトリは以下の処理を自動で行います：
 
-空冷ビートルをまだ所有していないため、画像は AI生成のプレースホルダーを使用しています。  
-後から実写に差し替えることができます。
+1. **OpenAI が記事を自動生成（generate-post.js）**  
+2. **post.yml に記事データを書き出し**  
+3. **images フォルダから画像を 1 枚ランダム選出**  
+4. **livedoor AtomPub API に画像アップロード**  
+5. **記事本文＋画像を livedoor に投稿（steemit-to-livedoor.js）**  
+6. **GitHub Actions が毎日指定時刻に自動投稿（.github/workflows/post.yml）**
 
 ---
 

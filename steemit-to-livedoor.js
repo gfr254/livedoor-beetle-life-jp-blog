@@ -1,5 +1,5 @@
 import fs from "fs";
-import yaml from "js-yaml";
+import { load } from "js-yaml";
 import fetch from "node-fetch";
 
 const BLOG_NAME = "beetle_life_jp_blog";
@@ -8,7 +8,6 @@ const AUTH = "Basic " + Buffer.from(
   process.env.LD_USER + ":" + process.env.LD_PASSWORD
 ).toString("base64");
 
-// 本文を空冷ビートルブランドのHTMLに整形
 function beetleHtml(bodyJa) {
   return `
   <div class="beetle-story">
@@ -17,19 +16,14 @@ function beetleHtml(bodyJa) {
   `;
 }
 
-// imagesフォルダから1枚だけランダム選出（拡張子複数対応）
 function pickOneRandomImage(folder = "images") {
   const allowedExt = /\.(jpg|jpeg|png|webp|gif)$/i;
-
   const files = fs.readdirSync(folder).filter(f => allowedExt.test(f));
-
   if (files.length === 0) return null;
-
   const idx = Math.floor(Math.random() * files.length);
   return `${folder}/${files[idx]}`;
 }
 
-// livedoor画像アップロード
 async function uploadImage(path) {
   const file = fs.readFileSync(path);
 
@@ -47,7 +41,6 @@ async function uploadImage(path) {
   return id;
 }
 
-// カテゴリID取得
 async function getCategoryId(name) {
   const xml = await fetch(`${BASE}/category`, {
     headers: { "Authorization": AUTH }
@@ -57,7 +50,6 @@ async function getCategoryId(name) {
   return match ? match[1] : null;
 }
 
-// 記事投稿
 async function postArticle(title, html, categoryId) {
   const xml = `
   <entry xmlns="http://www.w3.org/2005/Atom">
@@ -81,13 +73,11 @@ async function postArticle(title, html, categoryId) {
 }
 
 async function main() {
-  const yml = yaml.load(fs.readFileSync("post.yml", "utf-8"));
+  const yml = load(fs.readFileSync("post.yml", "utf-8"));
 
   let bodyHtml = beetleHtml(yml.body_ja);
 
-  // 画像1枚ランダム選出
   const imgPath = pickOneRandomImage("images");
-
   if (imgPath) {
     const id = await uploadImage(imgPath);
     bodyHtml += `<p><img src="https://livedoor.blogimg.jp/${BLOG_NAME}/images/${id}.jpg" /></p>`;
