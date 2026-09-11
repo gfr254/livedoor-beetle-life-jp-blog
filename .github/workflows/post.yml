@@ -1,31 +1,5 @@
-name: Auto Post to Livedoor Blog
-
-on:
-  schedule:
-    - cron: "0 7 * * *"
-  workflow_dispatch:
-
-jobs:
-  post:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Generate article
-        run: node generate.js
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
-      - name: Post with Playwright
-        run: node post-with-playwright.js
-        env:
-          LD_USER: ${{ secrets.LD_USER }}
-          LD_PASSWORD: ${{ secrets.LD_PASSWORD }}
+- name: Fetch editor HTML
+  run: node fetch-editor-html.js
+  env:
+    LD_USER: ${{ secrets.LD_USER }}
+    LD_PASSWORD: ${{ secrets.LD_PASSWORD }}
