@@ -24,9 +24,8 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-      - name: Post to Livedoor
-        run: node atompub-post.js
+      - name: Post with Playwright
+        run: node post-with-playwright.js
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           LD_USER: ${{ secrets.LD_USER }}
-          LD_ATOM_PASS: ${{ secrets.LD_ATOM_PASS }}
+          LD_PASSWORD: ${{ secrets.LD_PASSWORD }}
