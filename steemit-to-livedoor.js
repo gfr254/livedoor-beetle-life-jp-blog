@@ -9,10 +9,6 @@ const AUTH = "Basic " + Buffer.from(
   process.env.LD_USER + ":" + process.env.LD_PASSWORD
 ).toString("base64");
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
 // 本文整形
 function beetleHtml(bodyJa) {
   return `
@@ -35,90 +31,11 @@ function pickRandomImageUrl() {
   return list[idx];
 }
 
-// livedoorカテゴリID取得（なければ自動作成）
-async function getCategoryId(name) {
-  name = name.trim().toLowerCase();
-
-  // 既存カテゴリ一覧を取得
-  const xml = await fetch(`${BASE}/category`, {
-    headers: { "Authorization": AUTH }
-  }).then(r => r.text());
-
-  const xmlLower = xml.toLowerCase();
-
-  // 部分一致で検索（不可視文字対策）
-  let match = xmlLower.match(
-    new RegExp(`<category term="(\\d+)" label="[^"]*${name}[^"]*"`)
-  );
-
-  if (match) {
-    return match[1]; // 既存カテゴリID
-  }
-
-  // ★カテゴリが存在しない → 新規作成
-  console.log("カテゴリが存在しないため新規作成します:", name);
-
-  const createXml = `
-  <entry xmlns="http://www.w3.org/2005/Atom">
-    <category label="${name}" />
-  </entry>
-  `;
-
-  const res = await fetch(`${BASE}/category`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/atom+xml;type=entry",
-      "Authorization": AUTH
-    },
-    body: createXml
-  });
-
-  const created = await res.text();
-  const createdLower = created.toLowerCase();
-
-  // 新規作成されたカテゴリIDを抽出
-  match = createdLower.match(/<category term="(\d+)" label="/);
-  if (match) {
-    console.log("新規カテゴリ作成成功:", name, "ID:", match[1]);
-    return match[1];
-  }
-
-  console.log("カテゴリ作成に失敗しました:", name);
-  return null;
-}
-
-// AI にカテゴリを選ばせる（英語カテゴリ）
-async function pickCategory(article) {
-  const prompt = `
-Read the following article and choose ONE best category name in English.
-Choose only from this list (return EXACTLY one of them):
-
-maintenance
-beetle-life
-traveldrive
-beetle-knowledge
-diy-custom
-gallery
-
-Return ONLY the category name.
-Article:
-${article}
-  `;
-
-  const res = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }]
-  });
-
-  return res.choices[0].message.content.trim().toLowerCase();
-}
-
-// 記事投稿
-async function postArticle(title, html, categoryId) {
+// ★ カテゴリーなしで投稿する版
+async function postArticle(title, html) {
   const xml = `
   <entry xmlns="http://www.w3.org/2005/Atom">
     <title>${title}</title>
-    <category term="${categoryId}" />
     <content type="html"><![CDATA[${html}]]></content>
   </entry>
   `;
@@ -146,19 +63,8 @@ async function main() {
     bodyHtml += `<p><img src="${imgUrl}" /></p>`;
   }
 
-  // AIカテゴリ判定（正規化済み）
-  const categoryName = await pickCategory(yml.body_ja);
-  console.log("AI選択カテゴリ:", categoryName);
-
-  // livedoorカテゴリID取得（なければ自動作成）
-  const catId = await getCategoryId(categoryName);
-
-  if (!catId) {
-    console.log("カテゴリIDが取得できませんでした:", categoryName);
-    return;
-  }
-
-  await postArticle(yml.title_ja, bodyHtml, catId);
+  // ★ カテゴリ処理を完全に削除
+  await postArticle(yml.title_ja, bodyHtml);
 }
 
 main();
