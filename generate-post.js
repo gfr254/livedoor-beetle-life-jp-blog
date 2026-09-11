@@ -7,7 +7,8 @@ const client = new OpenAI({
 
 const prompt = `
 あなたは「空冷ビートル生活ブログ」の専属ライターです。
-以下の条件で日本語の記事を生成してください。
+
+以下の条件で日本語の記事を生成してください：
 
 - テーマ：空冷ビートルの旅・整備・生活
 - 文体：旅日記＋整備記録＋写真映えする描写
@@ -15,7 +16,11 @@ const prompt = `
 - livedoorブログに投稿する前提で自然な日本語
 - 画像は生成しない（後でフォルダからランダム選出する）
 
-出力フォーマットは YAML で：
+【重要】
+出力は絶対にコードブロック（\`\`\`）を含めないでください。
+純粋な YAML のみを返してください。
+
+出力フォーマット：
 
 title_ja: "記事タイトル"
 body_ja: |
@@ -29,7 +34,10 @@ async function main() {
     messages: [{ role: "user", content: prompt }]
   });
 
-  const yml = response.choices[0].message.content;
+  let yml = response.choices[0].message.content;
+
+  // 念のためコードブロックを除去（保険）
+  yml = yml.replace(/```yaml/g, "").replace(/```/g, "");
 
   fs.writeFileSync("post.yml", yml, "utf-8");
   console.log("post.yml を生成しました");
