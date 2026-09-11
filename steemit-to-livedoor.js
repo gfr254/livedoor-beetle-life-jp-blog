@@ -35,17 +35,22 @@ function pickRandomImageUrl() {
   return list[idx];
 }
 
-// livedoorカテゴリID取得
+// livedoorカテゴリID取得（nullカテゴリ防止版）
 async function getCategoryId(name) {
+  name = name.trim().toLowerCase(); // 正規化
+
   const xml = await fetch(`${BASE}/category`, {
     headers: { "Authorization": AUTH }
   }).then(r => r.text());
 
-  const match = xml.match(new RegExp(`<category term="(\\d+)" label="${name}"`));
+  // 小文字比較のために XML を小文字化
+  const xmlLower = xml.toLowerCase();
+
+  const match = xmlLower.match(new RegExp(`<category term="(\\d+)" label="${name}"`));
   return match ? match[1] : null;
 }
 
-// AI にカテゴリを選ばせる
+// AI にカテゴリを選ばせる（英語カテゴリ）
 async function pickCategory(article) {
   const prompt = `
 Read the following article and choose ONE best category name in English.
@@ -69,7 +74,7 @@ ${article}
     messages: [{ role: "user", content: prompt }]
   });
 
-  return res.choices[0].message.content.trim();
+  return res.choices[0].message.content.trim().toLowerCase();
 }
 
 // 記事投稿
@@ -98,27 +103,26 @@ async function postArticle(title, html, categoryId) {
 async function main() {
   const yml = load(fs.readFileSync("post.yml", "utf-8"));
 
-  // 本文整形
   let bodyHtml = beetleHtml(yml.body_ja);
 
-  // livedoor画像ランダム挿入
   const imgUrl = pickRandomImageUrl();
   if (imgUrl) {
     bodyHtml += `<p><img src="${imgUrl}" /></p>`;
   }
 
-  // AI にカテゴリを選ばせる
+  // AIカテゴリ判定（正規化済み）
   const categoryName = await pickCategory(yml.body_ja);
   console.log("AI選択カテゴリ:", categoryName);
 
   // livedoorカテゴリID取得
   const catId = await getCategoryId(categoryName);
 
- // ★ ここにチェックコードを入れる（最も正しい位置）
+  // ★ nullカテゴリ完全防止チェック
   if (!catId) {
-   console.log("カテゴリが livedoor に存在しません:", categoryName);
-   console.log("livedoor 側のカテゴリ名を英語に変更してください。");
-  return; // ここで処理を止める（投稿しない）
+    console.log("カテゴリが livedoor に存在しません:", categoryName);
+    console.log("livedoor 側のカテゴリ名を英語に変更してください。");
+    console.log("投稿は中止されました（nullカテゴリ防止）。");
+    return;
   }
 
   await postArticle(yml.title_ja, bodyHtml, catId);
