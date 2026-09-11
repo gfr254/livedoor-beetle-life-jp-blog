@@ -114,6 +114,13 @@ async function main() {
   // livedoorカテゴリID取得
   const catId = await getCategoryId(categoryName);
 
+ // ★ ここにチェックコードを入れる（最も正しい位置）
+  if (!catId) {
+   console.log("カテゴリが livedoor に存在しません:", categoryName);
+   console.log("livedoor 側のカテゴリ名を英語に変更してください。");
+  return; // ここで処理を止める（投稿しない）
+  }
+
   await postArticle(yml.title_ja, bodyHtml, catId);
 }
 
