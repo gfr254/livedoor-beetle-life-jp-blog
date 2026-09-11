@@ -28,5 +28,5 @@ jobs:
       - name: Post to Livedoor
         env:
           LD_USER: ${{ secrets.LD_USER }}
-          LD_ATOM_PASS: ${{ secrets.LD_ATOM_PASS }}
+          LD_PASSWORD: ${{ secrets.LD_PASSWORD }}
         run: node steemit-to-livedoor.js

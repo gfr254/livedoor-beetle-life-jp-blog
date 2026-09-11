@@ -5,7 +5,7 @@ import fetch from "node-fetch";
 const BLOG_NAME = "beetle_life_jp_blog";
 const BASE = `https://livedoor.blogcms.jp/atompub/${BLOG_NAME}`;
 const AUTH = "Basic " + Buffer.from(
-  process.env.LD_USER + ":" + process.env.LD_ATOM_PASS
+  process.env.LD_USER + ":" + process.env.LD_PASSWORD
 ).toString("base64");
 
 // 本文を空冷ビートルブランドのHTMLに整形
