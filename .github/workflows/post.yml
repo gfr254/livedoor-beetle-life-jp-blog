@@ -1,5 +1,24 @@
-- name: Fetch editor HTML
-  run: node fetch-editor-html.js
-  env:
-    LD_USER: ${{ secrets.LD_USER }}
-    LD_PASSWORD: ${{ secrets.LD_PASSWORD }}
+name: Fetch Editor HTML
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Fetch editor HTML
+        run: node fetch-editor-html.js
+        env:
+          LD_USER: ${{ secrets.LD_USER }}
+          LD_PASSWORD: ${{ secrets.LD_PASSWORD }}
