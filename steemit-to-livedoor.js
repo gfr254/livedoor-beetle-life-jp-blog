@@ -84,4 +84,66 @@ function buildHtmlMulti(post) {
 
 // ===============================
 // Livedoor 投稿処理
-//
+// ===============================
+async function postToLivedoor(cookies, post) {
+  console.log("投稿処理開始…");
+
+  const html = buildHtmlMulti(post);
+
+  const payload = new URLSearchParams({
+    title: post.title_ja,
+    body: html,
+    publish: "1",
+    category: "1"   // 空冷ビートル
+  });
+
+  const url = `https://livedoor.blogcms.jp/blog/${BLOG_ID}/post`;
+
+  console.log("投稿URL:", url);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Cookie": cookies
+    },
+    body: payload.toString()
+  });
+
+  console.log("投稿レスポンス:", res.status);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error("投稿失敗詳細:", text);
+    throw new Error(`投稿失敗: ${res.status}`);
+  }
+
+  console.log("Livedoor 投稿成功:", post.title_ja);
+}
+
+// ===============================
+// メイン処理
+// ===============================
+async function main() {
+  console.log("post.yml 読み込み開始…");
+
+  const raw = fs.readFileSync("post.yml", "utf8");
+
+  let post;
+  try {
+    post = JSON.parse(raw);
+  } catch (e) {
+    console.error("post.yml JSONパース失敗:", e.message);
+    throw e;
+  }
+
+  console.log("post.yml 読み込み成功:", post.title_ja);
+
+  const cookies = await loginLivedoor(process.env.LD_USER, process.env.LD_PASSWORD);
+  await postToLivedoor(cookies, post);
+}
+
+main().catch(err => {
+  console.error("steemit-to-livedoor.js 実行中にエラー:", err);
+  process.exit(1);
+});
