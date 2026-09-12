@@ -44,34 +44,43 @@ async function loginAndPost(user, pass, post) {
 
   console.log("🔐 ログイン成功");
 
-  // 3. 投稿ページへ
+  // 3. ログイン後のブログ選択ページへ
+  await page.goto(`https://livedoor.blogcms.jp/blog/${BLOG_ID}/`, {
+    waitUntil: "networkidle2"
+  });
+
+  // 4. 新規投稿ページへ
   await page.goto(`https://livedoor.blogcms.jp/blog/${BLOG_ID}/post`, {
     waitUntil: "networkidle2"
   });
 
-  // 4. 投稿フォーム入力
-  await page.type('#title', post.title_ja);
+  // 5. iframe を取得
+  await page.waitForSelector("iframe#main-iframe");
+  const frameHandle = await page.$("iframe#main-iframe");
+  const frame = await frameHandle.contentFrame();
+
+  // 6. 投稿フォーム入力（iframe 内）
+  await frame.type("#title", post.title_ja);
 
   const html = buildHtml(post);
-  await page.type('#body', html);
+  await frame.type("#body", html);
 
-
-  // カテゴリ選択（存在しない場合はスキップ）
+  // カテゴリ選択（iframe 内）
   if (post.category_name) {
     try {
-      await page.select('select[name="category_id"]', post.category_name);
+      await frame.select('select[name="category_id"]', post.category_name);
     } catch {
       console.log("⚠ カテゴリが存在しないためスキップ");
     }
   }
 
-  // 5. 投稿ボタン押下
+  // 7. 投稿ボタン押下（iframe 内）
   await Promise.all([
-    page.click('input[type="submit"]'),
+    frame.click('input[type="submit"]'),
     page.waitForNavigation({ waitUntil: "networkidle2" })
   ]);
 
-  // 6. 投稿成功 URL 抽出
+  // 8. 投稿成功 URL 抽出
   const finalHtml = await page.content();
   const match = finalHtml.match(/https:\/\/livedoor\.blogcms\.jp\/blog\/[^"]+/);
 
