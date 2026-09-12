@@ -18,15 +18,26 @@ async function loginLivedoor(user, pass) {
 }
 
 // ===============================
-// HTML生成（日本語＋英語）
+// 画像を image.txt からランダムに選ぶ
+// ===============================
+function pickImage() {
+  const list = fs.readFileSync("image.txt", "utf8")
+    .split("\n")
+    .map(x => x.trim())
+    .filter(x => x.length > 0);
+
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+// ===============================
+// HTML生成（日本語＋英語＋画像）
 // ===============================
 function buildHtmlMulti(post) {
   let html = "";
 
-  // 画像
-  if (post.image?.url) {
-    html += `<p><img src="${post.image.url}" alt="${post.image.alt_ja || post.title_ja}"></p>`;
-  }
+  // 画像（image.txt からランダム）
+  const img = pickImage();
+  html += `<p><img src="${img}" alt="${post.title_ja}"></p>`;
 
   // 日本語
   if (Array.isArray(post.body_ja)) {
@@ -56,7 +67,7 @@ async function postToLivedoor(cookies, post) {
   const html = buildHtmlMulti(post);
 
   const payload = new URLSearchParams({
-    title: post.title_ja || "空冷ビートルの藤岡市生活",
+    title: post.title_ja,
     body: html,
     publish: "1"
   });
@@ -83,17 +94,7 @@ async function postToLivedoor(cookies, post) {
 // ===============================
 async function main() {
   const raw = fs.readFileSync("post.yml", "utf8");
-
-  let post;
-  try {
-    post = JSON.parse(raw);   // ← 最重要修正ポイント
-  } catch (e) {
-    throw new Error("post.yml の JSON パースに失敗: " + e.message);
-  }
-
-  if (!post.title_ja || !post.body_ja) {
-    throw new Error("post.yml の内容が不正（title_ja / body_ja がありません）");
-  }
+  const post = JSON.parse(raw);
 
   const cookies = await loginLivedoor(process.env.LD_USER, process.env.LD_PASSWORD);
   await postToLivedoor(cookies, post);
