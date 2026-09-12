@@ -1,101 +1,55 @@
-import fs from "fs";
-import OpenAI from "openai";
+title_ja: "ブログ自動生成AIの紹介"
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+image:
+  url: "https://example.com/blog_icon.jpg"
+  alt_ja: "ブログ自動生成AIの紹介"
+  alt_en: "Introduction to Blog Generation AI"
+  alt_es: "Introducción a la IA de generación de blogs"
+  alt_ko: "블로그 생성 AI 소개"
 
-// ===============================
-// テーマを毎日ランダム生成（旧車ブログ向け）
-// ===============================
-const THEMES = [
-  "ブログ自動生成AIの紹介",
-  "キャブ調整の記録",
-  "農道で発生した振動トラブル",
-  "山道走行で感じた負荷の変化",
-  "プラグ清掃の効果",
-  "藤岡市の冬とチョーク調整",
-  "空冷ビートルの旅日記",
-  "アイドリング調整のコツ",
-  "オイル交換の記録",
-  "整備とトラブルの備忘録"
-];
+body_ja:
+  - section_title: "ブログ自動生成AIとは"
+    content: |
+      最近は、空冷ビートルの整備や走行記録を残すために、ブログ自動生成AIを活用しています。
+      毎日書くのは意外と大変ですが、AIが下書きを作ってくれることで、記録のハードルがぐっと下がりました。
 
-function pickTheme() {
-  return THEMES[Math.floor(Math.random() * THEMES.length)];
-}
+  - section_title: "藤岡市での旧車生活とAIの相性"
+    content: |
+      群馬県藤岡市は山道・農道・市街地が混在しており、空冷ビートルにとって負荷の変化が大きい地域です。
+      こうした環境で起きた出来事を記録する際、AIが文章の骨格を作ってくれるので、後から自分の感想を足すだけで記事が完成します。
 
-// ===============================
-// OpenAI に構造化 JSON を生成させる
-// ===============================
-async function generatePost() {
-  const theme = pickTheme();
+  - section_title: "AIを使うメリット"
+    content: |
+      ・整備記録のテンプレ化が簡単  
+      ・旅の記録が写真からすぐ作れる  
+      ・文章の流れを自動で整えてくれる  
+      ・多言語化が自然にできる  
 
-  const prompt = `
-あなたは「群馬県藤岡市で空冷ビートルと暮らす旧車ブロガー」です。
-以下の構造の JSON を生成してください。
+  - section_title: "具体的な使い方"
+    content: |
+      テーマを指定すると、関連する情報をまとめて文章化してくれます。
+      私の場合は「キャブ調整」「農道での振動」「山道の負荷」などを入力して下書きを作っています。
 
-必須条件：
-- 人間が書いたような自然な文章
-- 藤岡市の道路環境（山道・農道・市街地・冬の冷え込み）を必ず含める
-- 空冷ビートルの生活感（整備・トラブル・旅）を含める
-- 繰り返し表現は禁止
-- 多言語は自然な翻訳にする
-- 内部リンクは3つだけ生成
-- JSON は必ずパース可能な形式で出力する
+  - section_title: "注意していること"
+    content: |
+      最終的な仕上げは必ず自分で行います。
+      空冷ビートルの音や匂い、走りの感触などは、やはり自分の言葉で書く方が伝わります。
 
-出力形式：
+  - section_title: "まとめ"
+    content: |
+      ブログ自動生成AIは、旧車ブログとの相性がとても良いと感じています。
+      記録の継続が楽になり、藤岡市でのビートル生活をより深く残せるようになりました。
 
-{
-  "title_ja": "${theme}",
-  "image": {
-    "url": "https://source.unsplash.com/featured/?volkswagen,beetle",
-    "alt_ja": "${theme}",
-    "alt_en": "Air-cooled Beetle: ${theme}",
-    "alt_es": "Volkswagen Escarabajo: ${theme}",
-    "alt_ko": "공랭 비틀: ${theme}"
-  },
-  "body_ja": [
-    { "section_title": "導入", "content": "..." },
-    { "section_title": "藤岡市での旧車生活", "content": "..." },
-    { "section_title": "今回のテーマ：${theme}", "content": "..." },
-    { "section_title": "具体的な体験談", "content": "..." },
-    { "section_title": "学んだこと", "content": "..." },
-    { "section_title": "まとめ", "content": "..." },
-    { "section_title": "関連リンク", "content": "空冷ビートルのキャブ調整, 農道での振動対策, 山道走行のポイント" }
-  ],
-  "body_en": [
-    { "section_title": "Introduction", "content": "..." },
-    { "section_title": "Driving in Fujioka", "content": "..." },
-    { "section_title": "Insights", "content": "..." }
-  ],
-  "body_es": [
-    { "section_title": "Introducción", "content": "..." },
-    { "section_title": "Entorno de conducción", "content": "..." },
-    { "section_title": "Conclusiones", "content": "..." }
-  ],
-  "body_ko": [
-    { "section_title": "소개", "content": "..." },
-    { "section_title": "후지오카 주행 환경", "content": "..." },
-    { "section_title": "정리", "content": "..." }
-  ]
-}
-`;
+  - section_title: "関連リンク"
+    content: |
+      空冷ビートルのキャブ調整, 農道での振動対策, 山道走行のポイント
 
-  const completion = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: "You are a JSON generator. Output only valid JSON." },
-      { role: "user", content: prompt }
-    ],
-    temperature: 0.4
-  });
+body_en:
+  - section_title: "Introduction"
+    content: |
+      I use blog generation AI to help document my daily life with an air‑cooled Beetle in Fujioka City.
+      It creates structured drafts, making it easier to record maintenance and driving experiences.
 
-  const jsonText = completion.choices[0].message.content.trim();
-  const post = JSON.parse(jsonText);
-
-  fs.writeFileSync("post.yml", JSON.stringify(post, null, 2));
-  console.log("post.yml を生成しました:", post.title_ja);
-}
-
-generatePost();
+  - section_title: "Driving Environment in Fujioka"
+    content: |
+      Fujioka has mountain roads, farm paths, and busy streets
