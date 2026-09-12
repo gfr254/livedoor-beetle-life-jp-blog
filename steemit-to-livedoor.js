@@ -57,30 +57,31 @@ function buildHtmlMulti(post) {
 
   let html = "";
 
-  // ★ 抜粋生成用テキスト（必ず先頭）
+  // 抜粋生成用テキスト
   html += `<p>${post.title_ja}</p>`;
 
-  // ★ default_2012 の抜粋バグ回避：画像は <div> にする
+  // 画像
   const img = pickImage();
   html += `<div><img src="${img}" alt="${post.title_ja}"></div>`;
 
   // 日本語本文
-  html += "<h2>🇯🇵 日本語</h2>";
+  html += `<p>【日本語】</p>`;
   for (const sec of post.body_ja) {
-    html += `<h3>${sec.section_title}</h3>`;
+    html += `<p>■ ${sec.section_title}</p>`;
     html += `<p>${sec.content.replace(/\n/g, "<br>")}</p>`;
   }
 
   // 英語本文
-  html += "<h2>🇺🇸 English</h2>";
+  html += `<p>【English】</p>`;
   for (const sec of post.body_en) {
-    html += `<h3>${sec.section_title}</h3>`;
+    html += `<p>■ ${sec.section_title}</p>`;
     html += `<p>${sec.content.replace(/\n/g, "<br>")}</p>`;
   }
 
   console.log("HTML生成完了");
   return html;
 }
+
 
 // ===============================
 // Livedoor 投稿処理
