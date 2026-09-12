@@ -58,10 +58,10 @@ async function main() {
   const raw = fs.readFileSync('post.yml', 'utf8');
   const post = JSON.parse(raw);
   const user = process.env.LD_USER;
-  const apiKey = process.env.LD_API_KEY;
+  const apiKey = process.env.LD_API_KEY || process.env.LD_PASSWORD;
 
   if (!user || !apiKey) {
-    throw new Error('LD_USER と LD_API_KEY をGitHub Secretsに設定してください');
+    throw new Error('LD_USER と AtomPub用パスワード（LD_API_KEY または LD_PASSWORD）をGitHub Secretsに設定してください');
   }
   if (!post.title_ja || !Array.isArray(post.body_ja)) {
     throw new Error('post.yml の記事データが不正です');
