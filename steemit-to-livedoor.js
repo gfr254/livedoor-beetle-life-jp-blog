@@ -18,10 +18,10 @@ async function loginLivedoor(user, pass) {
 }
 
 // ===============================
-// image.txt からランダムに1枚選ぶ
+// images.txt からランダムに1枚選ぶ
 // ===============================
 function pickImage() {
-  const list = fs.readFileSync("image.txt", "utf8")
+  const list = fs.readFileSync("images.txt", "utf8")
     .split("\n")
     .map(x => x.trim())
     .filter(x => x.length > 0);
