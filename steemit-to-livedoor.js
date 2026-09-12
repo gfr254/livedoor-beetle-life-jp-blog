@@ -77,21 +77,21 @@ function buildHtmlMulti(post) {
 }
 
 // ===============================
-// Livedoor 投稿処理（ブログID固定版）
+// Livedoor 投稿処理（カテゴリなし版）
 // ===============================
 async function postToLivedoor(cookies, post) {
   console.log("投稿処理開始…");
 
   const html = buildHtmlMulti(post);
 
+  // ★ カテゴリを完全に外す（category を送らない）
   const payload = new URLSearchParams({
     title: post.title_ja,
     body: html,
-    publish: "1",
-    category: "1"   // ← 車カテゴリに強制投稿
+    publish: "1"
+    // category: を削除
   });
 
-  // ★ 投稿先ブログを強制指定 ★
   const url = `https://livedoor.blogcms.jp/blog/${BLOG_ID}/post`;
 
   console.log("投稿URL:", url);
