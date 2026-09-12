@@ -1,7 +1,7 @@
 import fs from "fs";
 import fetch from "node-fetch";
 
-const BLOG_ID = "beetle_life_jp_blog";  // ← あなたのブログIDを固定
+const BLOG_ID = "beetle-life-jp-blog";
 
 // ===============================
 // Livedoor ログイン処理
