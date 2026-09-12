@@ -1,27 +1,35 @@
 import fs from "fs";
 import fetch from "node-fetch";
-import fetchCookie from "fetch-cookie";
-import { CookieJar } from "tough-cookie";
 
 const BLOG_ID = "beetle-life-jp-blog";
 
-// Cookie 管理付き fetch
-const jar = new CookieJar();
-const cookieFetch = fetchCookie(fetch, jar);
+// Cookie 管理
+function extractCookies(res) {
+  const raw = res.headers.raw()["set-cookie"] || [];
+  return raw.map(c => c.split(";")[0]).join("; ");
+}
 
-// OpenID ログイン（最終完全版）
+// Cookie を付けて fetch
+async function fetchWithCookies(url, options = {}, cookies = "") {
+  const headers = options.headers || {};
+  if (cookies) headers["Cookie"] = cookies;
+  return fetch(url, { ...options, headers });
+}
+
+// OpenID ログイン（依存なし最終版）
 async function loginLivedoor(user, pass) {
   console.log("🔐 OpenID ログイン開始");
 
   // 1. ログインページ取得（token 抽出）
-  const loginPage = await cookieFetch("https://auth.livedoor.com/login/");
-  const html = await loginPage.text();
+  let res = await fetch("https://auth.livedoor.com/login/");
+  let cookies = extractCookies(res);
+  let html = await res.text();
 
   const token = html.match(/name="_token" value="([^"]+)"/)?.[1];
   if (!token) throw new Error("ログインページから token を取得できません");
 
   // 2. ログイン POST
-  const res = await cookieFetch("https://auth.livedoor.com/login/", {
+  res = await fetchWithCookies("https://auth.livedoor.com/login/", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -29,24 +37,34 @@ async function loginLivedoor(user, pass) {
       password: pass,
       _token: token
     })
-  });
+  }, cookies);
 
-  // 3. livedoor.blogcms.jp にログインできているか確認
-  const check = await cookieFetch("https://livedoor.blogcms.jp/blog/");
-  const checkText = await check.text();
+  cookies = extractCookies(res);
 
-  if (checkText.includes("ログイン")) {
-    throw new Error("ログイン失敗（OpenID 認証を通過できませんでした）");
+  // 3. リダイレクト先を追跡
+  let nextUrl = res.url;
+
+  while (true) {
+    const r = await fetchWithCookies(nextUrl, {}, cookies);
+    cookies = extractCookies(r);
+
+    if (!r.redirected) {
+      const text = await r.text();
+      if (text.includes("ログイン")) {
+        throw new Error("ログイン失敗（OpenID 認証を通過できませんでした）");
+      }
+      console.log("🔐 ログイン成功");
+      return cookies;
+    }
+
+    nextUrl = r.url;
   }
-
-  console.log("🔐 ログイン成功");
-  return jar;
 }
 
 // カテゴリ一覧取得
-async function fetchCategories() {
+async function fetchCategories(cookies) {
   const url = `https://livedoor.blogcms.jp/blog/${BLOG_ID}/category`;
-  const res = await cookieFetch(url);
+  const res = await fetchWithCookies(url, {}, cookies);
   const xml = await res.text();
 
   const categories = [...xml.matchAll(/<category\s+term="(\d+)"\s+label="([^"]+)"\s*\/>/g)]
@@ -55,9 +73,9 @@ async function fetchCategories() {
   return categories;
 }
 
-// カテゴリ名 → ID（完全版）
-async function resolveCategoryId(categoryName) {
-  const categories = await fetchCategories();
+// カテゴリ名 → ID
+async function resolveCategoryId(cookies, categoryName) {
+  const categories = await fetchCategories(cookies);
 
   if (!categories || categories.length === 0) {
     console.log("⚠ カテゴリ一覧が取得できません → カテゴリなし投稿に切り替えます");
@@ -92,10 +110,10 @@ function buildHtml(post) {
   return html.trimStart();
 }
 
-// 投稿（最終完全版）
-async function postToLivedoor(post) {
+// 投稿
+async function postToLivedoor(cookies, post) {
   const html = buildHtml(post);
-  const categoryId = await resolveCategoryId(post.category_name);
+  const categoryId = await resolveCategoryId(cookies, post.category_name);
 
   const payload = new URLSearchParams({
     title: post.title_ja,
@@ -108,20 +126,18 @@ async function postToLivedoor(post) {
 
   const url = `https://livedoor.blogcms.jp/blog/${BLOG_ID}/post`;
 
-  const res = await cookieFetch(url, {
+  const res = await fetchWithCookies(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: payload.toString()
-  });
+  }, cookies);
 
   console.log("投稿レスポンス:", res.status);
 
   const resText = await res.text();
   console.log("投稿レスポンス本文:", resText);
 
-  // ★ 投稿成功時の URL 抽出
+  // 投稿成功 URL 抽出
   const match = resText.match(/https:\/\/livedoor\.blogcms\.jp\/blog\/[^"]+/);
   if (match) {
     console.log("✅ 投稿成功 URL:", match[0]);
@@ -139,8 +155,8 @@ async function main() {
   const raw = fs.readFileSync("post.yml", "utf8");
   const post = JSON.parse(raw);
 
-  await loginLivedoor(process.env.LD_USER, process.env.LD_PASSWORD);
-  await postToLivedoor(post);
+  const cookies = await loginLivedoor(process.env.LD_USER, process.env.LD_PASSWORD);
+  await postToLivedoor(cookies, post);
 }
 
 main();
