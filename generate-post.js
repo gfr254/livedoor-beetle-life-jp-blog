@@ -33,7 +33,7 @@ async function generatePost() {
   const title_ja = pick(TITLES_JA);
 
   const prompt = `
-出力は JSON のみ。
+出力は JSON のみ。コードブロック禁止。
 
 {
   "title_ja": "${title_ja}",
@@ -50,7 +50,7 @@ async function generatePost() {
   const res = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
-      { role: "system", content: "JSONのみ出力" },
+      { role: "system", content: "JSONのみ出力。コードブロック禁止。" },
       { role: "user", content: prompt }
     ],
     temperature: 0.4
@@ -58,14 +58,19 @@ async function generatePost() {
 
   let jsonText = res.choices[0].message.content.trim();
 
+  // ★ コードブロック除去（必須）
+  jsonText = jsonText.replace(/```json/g, "").replace(/```/g, "").trim();
+
   let post;
   try {
     post = JSON.parse(jsonText);
   } catch {
+    console.log("JSON壊れ → 再生成");
     return generatePost();
   }
 
   if (!validate(post)) {
+    console.log("本文壊れ → 再生成");
     return generatePost();
   }
 
@@ -73,6 +78,7 @@ async function generatePost() {
   const tagPrompt = `
 以下の記事内容から、ブログタグとして適切な単語を5〜10個生成してください。
 形式は JSON 配列のみで返してください。
+コードブロック禁止。
 
 記事内容：
 ${post.body_ja.map(s => s.content).join("\n")}
@@ -83,11 +89,15 @@ ${post.body_ja.map(s => s.content).join("\n")}
     messages: [{ role: "user", content: tagPrompt }]
   });
 
-  post.tags = JSON.parse(tagRes.choices[0].message.content);
+  let tagText = tagRes.choices[0].message.content.trim();
+  tagText = tagText.replace(/```json/g, "").replace(/```/g, "").trim();
+  post.tags = JSON.parse(tagText);
 
   // カテゴリ判定
   const categoryPrompt = `
 以下の記事内容を読み、最適なカテゴリー名を1つだけ返してください。
+コードブロック禁止。
+
 選択肢：
 
 - 整備・メンテナンス
@@ -106,7 +116,9 @@ ${post.body_ja.map(s => s.content).join("\n")}
     messages: [{ role: "user", content: categoryPrompt }]
   });
 
-  post.category_name = catRes.choices[0].message.content.trim();
+  let catText = catRes.choices[0].message.content.trim();
+  catText = catText.replace(/```/g, "").trim();
+  post.category_name = catText;
 
   fs.writeFileSync("post.yml", JSON.stringify(post, null, 2));
   console.log("post.yml を生成しました:", post.title_ja);

@@ -77,6 +77,10 @@ async function postToLivedoor(cookies, post) {
   });
 
   console.log("投稿レスポンス:", res.status);
+
+  // ★ livedoor の破棄理由をログに出す（必須）
+  const resText = await res.text();
+  console.log("投稿レスポンス本文:", resText);
 }
 
 // メイン
