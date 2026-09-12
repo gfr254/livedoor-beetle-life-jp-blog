@@ -90,7 +90,7 @@ async function postToLivedoor(cookies, post) {
   const payload = new URLSearchParams({
     title: post.title_ja,
     body: html,
-    publish: "1"
+    publish: "1",
     category: "1"   // ← これを戻す
   });
 
