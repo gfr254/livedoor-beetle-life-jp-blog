@@ -48,7 +48,7 @@ async function loginAndPost(post) {
   await page.click('button[type="submit"]');
   await page.waitForNavigation();
 
-  }
+  
 
   console.log("🔐 ログイン成功");
 
