@@ -12,7 +12,8 @@ async function loginLivedoor(user, pass) {
   });
 
   const cookies = res.headers.get("set-cookie");
-  if (!cookies) throw new Error("ログイン失敗");
+  if (!cookies) throw new Error("ログイン失敗（Cookieなし）");
+
   return cookies;
 }
 
@@ -22,15 +23,29 @@ async function fetchCategories(cookies) {
   const res = await fetch(url, { headers: { "Cookie": cookies } });
   const xml = await res.text();
 
-  return [...xml.matchAll(/<category\s+term="(\d+)"\s+label="([^"]+)"\s*\/>/g)]
+  const categories = [...xml.matchAll(/<category\s+term="(\d+)"\s+label="([^"]+)"\s*\/>/g)]
     .map(m => ({ id: m[1], name: m[2] }));
+
+  return categories;
 }
 
-// カテゴリ名 → ID
+// カテゴリ名 → ID（完全版）
 async function resolveCategoryId(cookies, categoryName) {
   const categories = await fetchCategories(cookies);
+
+  if (!categories || categories.length === 0) {
+    console.log("⚠ カテゴリ一覧が取得できませんでした → カテゴリなし投稿に切り替えます");
+    return ""; // category_id を送らない
+  }
+
   const found = categories.find(c => c.name === categoryName);
-  return found ? found.id : categories[0].id;
+
+  if (!found) {
+    console.log(`⚠ カテゴリ「${categoryName}」は存在しません → カテゴリなし投稿に切り替えます`);
+    return ""; // category_id を送らない
+  }
+
+  return found.id;
 }
 
 // HTML生成
@@ -42,7 +57,6 @@ function buildHtml(post) {
     html += `<p>${sec.content.replace(/\n/g, "<br>")}</p>`;
   }
 
-  // タグ挿入
   if (post.tags && post.tags.length > 0) {
     html += `<h3>Tags</h3><ul>`;
     for (const tag of post.tags) html += `<li>#${tag}</li>`;
@@ -52,7 +66,7 @@ function buildHtml(post) {
   return html.trimStart();
 }
 
-// 投稿
+// 投稿（完全版）
 async function postToLivedoor(cookies, post) {
   const html = buildHtml(post);
   const categoryId = await resolveCategoryId(cookies, post.category_name);
@@ -61,9 +75,13 @@ async function postToLivedoor(cookies, post) {
     title: post.title_ja,
     body: html,
     publish_type: "1",
-    category_id: categoryId,
     date: new Date().toISOString().slice(0, 19).replace("T", " ")
   });
+
+  // ★ category_id が空でなければ追加
+  if (categoryId) {
+    payload.append("category_id", categoryId);
+  }
 
   const url = `https://livedoor.blogcms.jp/blog/${BLOG_ID}/post`;
 
@@ -78,9 +96,13 @@ async function postToLivedoor(cookies, post) {
 
   console.log("投稿レスポンス:", res.status);
 
-  // ★ livedoor の破棄理由をログに出す（必須）
+  // ★ livedoor の破棄理由を必ずログ出力
   const resText = await res.text();
   console.log("投稿レスポンス本文:", resText);
+
+  if (!res.ok) {
+    throw new Error(`投稿失敗: ${res.status}`);
+  }
 }
 
 // メイン
