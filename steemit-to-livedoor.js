@@ -22,6 +22,14 @@ function buildHtml(post) {
 }
 
 // livedoor ログイン & 投稿（完全版）
+async function loginAndPost(user, pass, post) {
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+  });
+
+  const page = await browser.newPage();
+
   // 1. ログインページへ
   await page.goto("https://livedoor.blogcms.jp/login", { waitUntil: "networkidle2" });
 
@@ -35,7 +43,6 @@ function buildHtml(post) {
   ]);
 
   console.log("🔐 ログイン成功");
-
 
   // 3. 投稿ページへ
   await page.goto(`https://livedoor.blogcms.jp/blog/${BLOG_ID}/post`, {
