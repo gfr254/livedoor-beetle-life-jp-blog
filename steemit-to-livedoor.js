@@ -1,9 +1,6 @@
 import fs from "fs";
 import fetch from "node-fetch";
 
-// ===============================
-// Livedoor ログイン処理
-// ===============================
 async function loginLivedoor(user, pass) {
   const res = await fetch("https://livedoor.blogcms.jp/login", {
     method: "POST",
@@ -13,40 +10,35 @@ async function loginLivedoor(user, pass) {
 
   const cookies = res.headers.get("set-cookie");
   if (!cookies) throw new Error("ログイン失敗（Cookieなし）");
-
   return cookies;
 }
 
-// ===============================
-// images.txt からランダムに1枚選ぶ
-// ===============================
 function pickImage() {
   const list = fs.readFileSync("images.txt", "utf8")
     .split("\n")
     .map(x => x.trim())
     .filter(x => x.length > 0);
 
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+
   return list[Math.floor(Math.random() * list.length)];
 }
 
-// ===============================
-// HTML生成
-// ===============================
 function buildHtmlMulti(post) {
   let html = "";
 
-  // 画像
   const img = pickImage();
   html += `<p><img src="${img}" alt="${post.title_ja}"></p>`;
 
-  // 日本語
   html += "<h2>🇯🇵 日本語</h2>";
   for (const sec of post.body_ja) {
     html += `<h3>${sec.section_title}</h3>`;
     html += `<p>${sec.content.replace(/\n/g, "<br>")}</p>`;
   }
 
-  // 英語
   html += "<h2>🇺🇸 English</h2>";
   for (const sec of post.body_en) {
     html += `<h3>${sec.section_title}</h3>`;
@@ -56,9 +48,6 @@ function buildHtmlMulti(post) {
   return html;
 }
 
-// ===============================
-// Livedoor 投稿処理
-// ===============================
 async function postToLivedoor(cookies, post) {
   const html = buildHtmlMulti(post);
 
@@ -85,9 +74,6 @@ async function postToLivedoor(cookies, post) {
   console.log("Livedoor 投稿成功:", post.title_ja);
 }
 
-// ===============================
-// メイン処理
-// ===============================
 async function main() {
   const raw = fs.readFileSync("post.yml", "utf8");
   const post = JSON.parse(raw);
