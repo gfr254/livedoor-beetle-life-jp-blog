@@ -43,9 +43,11 @@ async function loginAndPost(post) {
   ]);
 
   // 3. ログイン成功チェック
-  const body = await page.content();
-  if (body.includes("ログイン")) {
-    throw new Error("ログイン失敗（ID またはパスワードが間違っています）");
+  await page.type('input[name="livedoor_id"]', user);
+  await page.type('input[name="password"]', pass);
+  await page.click('button[type="submit"]');
+  await page.waitForNavigation();
+
   }
 
   console.log("🔐 ログイン成功");
