@@ -86,12 +86,15 @@ function buildHtmlMulti(post) {
 // ===============================
 // Livedoor 投稿処理
 // ===============================
-console.log("=== 投稿HTML ===\n" + html + "\n=== /投稿HTML ===");
+
 
 async function postToLivedoor(cookies, post) {
   console.log("投稿処理開始…");
 
   const html = buildHtmlMulti(post);
+  
+  // ★ 投稿HTMLをログに出す（解析用）
+  console.log("=== 投稿HTML ===\n" + html + "\n=== /投稿HTML ===");
 
   const payload = new URLSearchParams({
     title: post.title_ja,
