@@ -67,14 +67,16 @@ function pick(arr) {
 }
 
 // ===============================
-// 壊れた本文検出
+// 壊れ判定（最小限）
 // ===============================
 function isBroken(text) {
   if (!text) return true;
+
+  // 本当に壊れている場合だけ弾く
   return (
-    text.includes("Introduct") ||
-    text.includes("undefined") ||
-    text.length < 50
+    text.includes("undefined") ||     // テンプレート展開失敗
+    text.includes("{") ||             // JSONが混入
+    text.includes("}")                // JSONが混入
   );
 }
 
