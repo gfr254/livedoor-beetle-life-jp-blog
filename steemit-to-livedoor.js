@@ -6,7 +6,7 @@ const BLOG_ID = "beetle-life-jp-blog";
 // ===============================
 // Livedoor ログイン処理
 // ===============================
-async function loginLiveddoor(user, pass) {
+async function loginLivedoor(user, pass) {
   console.log("ログイン開始…");
 
   const res = await fetch("https://livedoor.blogcms.jp/login", {
