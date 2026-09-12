@@ -57,26 +57,25 @@ function buildHtmlMulti(post) {
 
   let html = "";
 
-  // タイトル（h2 を使うことで livedoor が本文ありと判定する）
   html += `<h2>${post.title_ja}</h2>`;
 
-  // 画像
   const img = pickImage();
   html += `<div><img src="${img}" alt="${post.title_ja}"></div>`;
 
-  // 日本語本文
   html += `<h3>日本語</h3>`;
   for (const sec of post.body_ja) {
     html += `<h4>${sec.section_title}</h4>`;
     html += `<p>${sec.content.replace(/\n/g, "<br>")}</p>`;
   }
 
-  // 英語本文
   html += `<h3>English</h3>`;
   for (const sec of post.body_en) {
     html += `<h4>${sec.section_title}</h4>`;
     html += `<p>${sec.content.replace(/\n/g, "<br>")}</p>`;
   }
+
+  // ★ livedoor が破棄する不可視文字を完全除去（決定打）
+  html = html.replace(/^\uFEFF/, "").trimStart();
 
   console.log("HTML生成完了");
   return html;
