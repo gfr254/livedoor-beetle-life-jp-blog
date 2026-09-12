@@ -148,10 +148,13 @@ Output ONLY valid JSON.
     return generatePost();
   }
 
-  if (!validate(post)) {
-    console.log("本文壊れ → 再生成");
-    return generatePost();
-  }
+if (!validate(post)) {
+  console.log("=== 壊れたJSON ===");
+  console.log(jsonText);
+  console.log("=== /壊れたJSON ===");
+  console.log("本文壊れ → 再生成");
+  return generatePost();
+}
 
   fs.writeFileSync("post.yml", JSON.stringify(post, null, 2));
   console.log("post.yml を生成しました:", post.title_ja);
