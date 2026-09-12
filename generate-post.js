@@ -55,7 +55,7 @@ async function generatePost() {
     '    {\"section_title\":\"走行中の変化\",\"content\":\"\"},',
     '    {\"section_title\":\"気づいた原因\",\"content\":\"\"},',
     '    {\"section_title\":\"点検と対処\",\"content\":\"\"},',
-    '    {\"section_title\":\"まとめ\",\"content\":\"\"}'
+    '    {\"section_title\":\"まとめ\",\"content\":\"\"}',
     '  ]',
     '}'
   ].join(String.fromCharCode(10));
