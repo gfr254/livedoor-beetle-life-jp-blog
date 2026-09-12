@@ -15,38 +15,50 @@ const TITLES_JA = [
 function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
+function loadImageUrls() {
+  const urls = fs.readFileSync('images.txt', 'utf8').split(String.fromCharCode(10)).map(line => line.trim()).filter(url => /^https:\/\//i.test(url));
+  if (!urls.length) throw new Error('images.txtに有効な画像URLがありません');
+  return urls;
+}
+
+function bodyLength(post) {
+  return post.body_ja.map(section => section.content || '').join('').replace(/\s/g, '').length;
+}
 
 function isBroken(text) {
   if (!text) return true;
-  return text.includes("undefined") || text.includes("{");
+  return text.includes('undefined') || text.includes('{') || text.includes('```');
 }
 
 function validate(post) {
-  if (!post.title_ja) return false;
-  for (const sec of post.body_ja) {
-    if (isBroken(sec.content)) return false;
-  }
-  return true;
+  if (!post.title_ja || !Array.isArray(post.body_ja) || post.body_ja.length < 4) return false;
+  if (!post.image_url || !/^https:\/\//i.test(post.image_url)) return false;
+  if (bodyLength(post) < 260 || bodyLength(post) > 380) return false;
+  return post.body_ja.every(section => section.section_title && !isBroken(section.content));
 }
 
 async function generatePost() {
   const title_ja = pick(TITLES_JA);
 
-  const prompt = `
-出力は JSON のみ。コードブロック禁止。
-
-{
-  "title_ja": "${title_ja}",
-  "body_ja": [
-    { "section_title": "導入", "content": "藤岡市で空冷ビートルと暮らす日々は整備と発見の連続です。" },
-    { "section_title": "状況", "content": "今日は${title_ja}に関連する出来事がありました。" },
-    { "section_title": "原因", "content": "走行環境や気温の変化が空冷エンジンに影響した可能性があります。" },
-    { "section_title": "対処", "content": "簡単な点検と調整で症状は改善しました。" },
-    { "section_title": "まとめ", "content": "旧車生活は手間もありますが、それ以上に魅力があります。" }
-  ]
-}
-`;
-
+  const image_url = pick(loadImageUrls());
+  const prompt = [
+    '出力はJSONのみ。コードブロック禁止。',
+    '空冷ビートルを実際に所有している読者が読んで納得できる、読み応えのある日本語記事を作ってください。',
+    '本文全体は日本語で260〜380文字、目安は約300文字。5つのセクションを作り、各セクションは45〜80文字程度にしてください。',
+    '導入だけで終わらせず、走行中の具体的な感覚、気温や道の特徴、車の変化、点検や判断、最後に旧車と暮らす意味まで自然につなげてください。',
+    '実在しない部品名、費用、正確な数値、危険な整備手順を断定しないでください。本文はプレーンテキストで、HTMLは使わないでください。',
+    '',
+    '{',
+    '  \"title_ja\": \"' + title_ja + '\",',
+    '  \"body_ja\": [',
+    '    {\"section_title\":\"導入\",\"content\":\"\"},',
+    '    {\"section_title\":\"走行中の変化\",\"content\":\"\"},',
+    '    {\"section_title\":\"気づいた原因\",\"content\":\"\"},',
+    '    {\"section_title\":\"点検と対処\",\"content\":\"\"},',
+    '    {\"section_title\":\"まとめ\",\"content\":\"\"}'
+    '  ]',
+    '}'
+  ].join(String.fromCharCode(10));
   const res = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -64,13 +76,15 @@ async function generatePost() {
   let post;
   try {
     post = JSON.parse(jsonText);
+    post.image_url = image_url;
+    post.image_alt = post.title_ja;
   } catch {
     console.log("JSON壊れ → 再生成");
     return generatePost();
   }
 
   if (!validate(post)) {
-    console.log("本文壊れ → 再生成");
+    console.log('本文が約300文字の条件を満たさないため再生成します（文字数:', bodyLength(post), '）');
     return generatePost();
   }
 
@@ -121,7 +135,7 @@ ${post.body_ja.map(s => s.content).join("\n")}
   post.category_name = catText;
 
   fs.writeFileSync("post.yml", JSON.stringify(post, null, 2));
-  console.log("post.yml を生成しました:", post.title_ja);
+  console.log('post.ymlを生成しました:', post.title_ja, '本文:', bodyLength(post), '文字', '画像:', post.image_url);
 }
 
 generatePost();
