@@ -53,6 +53,7 @@ async function loginAndPost(user, pass, post) {
   await page.goto(`https://livedoor.blogcms.jp/blog/${BLOG_ID}/post`, {
     waitUntil: "networkidle2"
   });
+  console.log(await page.content());
 
   // 5. iframe を取得
   await page.waitForSelector("iframe#main-iframe");
