@@ -1,7 +1,8 @@
 import fs from 'fs';
+import crypto from 'crypto';
 
 const BLOG_ID = 'beetle-life-jp-blog';
-const API_URL = 'https://livedoor.blogcms.jp/atompub/' + BLOG_ID + '/article';
+const API_URL = 'https://livedoor.blogcms.jp/atom/blog/' + BLOG_ID + '/article';
 
 function escapeXml(value) {
   return String(value ?? '')
@@ -35,17 +36,37 @@ function buildHtml(post) {
   return html;
 }
 
-function buildEntry(post) {
+function createWsseHeader(username, apiKey) {
+  const created = new Date().toISOString();
+  const nonce = crypto.randomBytes(16);
+  const digest = crypto.createHash('sha1')
+    .update(Buffer.concat([nonce, Buffer.from(created, 'utf8'), Buffer.from(apiKey, 'utf8')]))
+    .digest('base64');
+
+  return 'UsernameToken Username="' + username +
+    '", PasswordDigest="' + digest +
+    '", Nonce="' + nonce.toString('base64') +
+    '", Created="' + created + '"';
+}
+
+function buildEntry(post, username) {
+  const now = new Date().toISOString();
   const html = buildHtml(post).replace(/\]\]>/g, ']]]]><![CDATA[>');
   const category = post.category_name
-    ? '\n  <category term="' + escapeXml(post.category_name) + '" />'
+    ? '\n  <category scheme="http://livedoor.blogcms.jp/blog/' + BLOG_ID + '/category" term="' + escapeXml(post.category_name) + '" />'
     : '';
 
-  return '<?xml version="1.0" encoding="UTF-8"?>\n' +
-    '<entry xmlns="http://www.w3.org/2005/Atom">\n' +
+  return '<entry xmlns="http://www.w3.org/2005/Atom" ' +
+    'xmlns:app="http://www.w3.org/2007/app" ' +
+    'xmlns:blogcms="http://blogcms.jp/-/spec/atompub/1.0/">\n' +
     '  <title>' + escapeXml(post.title_ja) + '</title>\n' +
-    '  <content type="html"><![CDATA[' + html + ']]></content>' +
-    category + '\n</entry>';
+    '  <updated>' + now + '</updated>\n' +
+    '  <published>' + now + '</published>\n' +
+    '  <author><name>' + escapeXml(username) + '</name></author>' +
+    category + '\n' +
+    '  <blogcms:source><blogcms:body><![CDATA[' + html + ']]></blogcms:body></blogcms:source>\n' +
+    '  <app:control><app:draft>no</app:draft></app:control>\n' +
+    '</entry>';
 }
 
 function extractArticleUrl(xml) {
@@ -55,8 +76,7 @@ function extractArticleUrl(xml) {
 }
 
 async function main() {
-  const raw = fs.readFileSync('post.yml', 'utf8');
-  const post = JSON.parse(raw);
+  const post = JSON.parse(fs.readFileSync('post.yml', 'utf8'));
   const user = process.env.LD_USER;
   const apiKey = process.env.LD_API_KEY || process.env.LD_PASSWORD;
 
@@ -67,15 +87,15 @@ async function main() {
     throw new Error('post.yml の記事データが不正です');
   }
 
-  const auth = Buffer.from(user + ':' + apiKey).toString('base64');
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: {
-      Authorization: 'Basic ' + auth,
+      Authorization: 'WSSE profile="UsernameToken"',
+      'X-WSSE': createWsseHeader(user, apiKey),
       'Content-Type': 'application/atom+xml;type=entry; charset=utf-8',
       Accept: 'application/atom+xml'
     },
-    body: buildEntry(post)
+    body: buildEntry(post, user)
   });
   const responseText = await response.text();
 
