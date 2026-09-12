@@ -50,12 +50,15 @@ function pickImage() {
 }
 
 // ===============================
-// HTML生成
+// HTML生成（★修正版）
 // ===============================
 function buildHtmlMulti(post) {
   console.log("HTML生成開始…");
 
   let html = "";
+
+  // ★ ここが最重要：抜粋生成用テキストを先頭に追加
+  html += `<p>${post.title_ja}</p>`;
 
   const img = pickImage();
   html += `<p><img src="${img}" alt="${post.title_ja}"></p>`;
@@ -84,12 +87,10 @@ async function postToLivedoor(cookies, post) {
 
   const html = buildHtmlMulti(post);
 
-  // ★ カテゴリを完全に外す（category を送らない）
   const payload = new URLSearchParams({
     title: post.title_ja,
     body: html,
     publish: "1"
-    // category: を削除
   });
 
   const url = `https://livedoor.blogcms.jp/blog/${BLOG_ID}/post`;
