@@ -3,6 +3,7 @@ import puppeteer from "puppeteer";
 
 const BLOG_ID = "beetle-life-jp-blog";
 
+// HTML生成
 function buildHtml(post) {
   let html = `<h2>${post.title_ja}</h2>`;
   for (const sec of post.body_ja) {
@@ -17,7 +18,7 @@ function buildHtml(post) {
   return html.trimStart();
 }
 
-async function loginAndPost(post) {
+async function loginAndPost(user, pass, post) {
   const browser = await puppeteer.launch({
     headless: "new",
     args: ["--no-sandbox", "--disable-setuid-sandbox"]
@@ -25,42 +26,57 @@ async function loginAndPost(post) {
 
   const page = await browser.newPage();
 
-  // Cookie を読み込む
-  const cookies = JSON.parse(fs.readFileSync("cookies.json"));
-  await page.setCookie(...cookies);
+  // 1. BlogCMS 専用ログインページへ
+  await page.goto("https://livedoor.blogcms.jp/login/index", {
+    waitUntil: "networkidle2"
+  });
 
-  // 投稿ページへ直接アクセス（ログイン不要）
+  // 2. livedoor ID ログイン
+  await page.type("#livedoor_id", user);
+  await page.type("#password", pass);
+
+  await Promise.all([
+    page.click("#submit"),
+    page.waitForNavigation({ waitUntil: "networkidle2" })
+  ]);
+
+  console.log("🔐 ログイン成功");
+
+  // 3. 投稿ページへ（BlogCMS セッションが維持される）
   await page.goto(`https://livedoor.blogcms.jp/blog/${BLOG_ID}/post`, {
     waitUntil: "networkidle2"
   });
 
-  // iframe がある場合は取得
-  const frameHandle = await page.$("iframe#main-iframe");
-  const frame = frameHandle ? await frameHandle.contentFrame() : page;
+  // 4. 投稿フォーム入力（iframe なし）
+  await page.type("#title", post.title_ja);
 
-  // タイトル
-  await frame.type("#title", post.title_ja);
-
-  // 本文
   const html = buildHtml(post);
-  await frame.type("#body", html);
+  await page.type("#body", html);
 
-  // カテゴリ
+  // 5. カテゴリ選択
   if (post.category_name) {
     try {
-      await frame.select('select[name="category_id"]', post.category_name);
+      await page.select('select[name="category_id"]', post.category_name);
     } catch {
       console.log("⚠ カテゴリが存在しないためスキップ");
     }
   }
 
-  // 投稿
+  // 6. 投稿
   await Promise.all([
-    frame.click('input[type="submit"]'),
+    page.click('input[type="submit"]'),
     page.waitForNavigation({ waitUntil: "networkidle2" })
   ]);
 
-  console.log("✅ 投稿完了");
+  // 7. 投稿成功 URL 抽出
+  const finalHtml = await page.content();
+  const match = finalHtml.match(/https:\/\/livedoor\.blogcms\.jp\/blog\/[^"]+/);
+
+  if (match) {
+    console.log("✅ 投稿成功 URL:", match[0]);
+  } else {
+    console.log("⚠ 投稿 URL を抽出できませんでした");
+  }
 
   await browser.close();
 }
@@ -69,7 +85,10 @@ async function main() {
   const raw = fs.readFileSync("post.yml", "utf8");
   const post = JSON.parse(raw);
 
-  await loginAndPost(post);
+  const user = process.env.LD_USER;
+  const pass = process.env.LD_PASSWORD;
+
+  await loginAndPost(user, pass, post);
 }
 
 main();
