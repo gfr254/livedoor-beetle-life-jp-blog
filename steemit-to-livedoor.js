@@ -87,7 +87,8 @@ async function postToLivedoor(cookies, post) {
   const payload = new URLSearchParams({
     title: post.title_ja,
     body: html,
-    publish: "1"
+    publish: "1",
+    category: "1"   // ← 車カテゴリに強制投稿
   });
 
   // ★ 投稿先ブログを強制指定 ★
