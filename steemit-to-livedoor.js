@@ -1,8 +1,11 @@
 import fs from 'fs';
 import crypto from 'crypto';
 
-const BLOG_ID = 'beetle-life-jp-blog';
-const API_URL = 'https://livedoor.blogcms.jp/atom/blog/' + BLOG_ID + '/article';
+const DEFAULT_BLOG_ID = 'beetle-life-jp-blog';
+
+function blogApiUrl(blogId) {
+  return 'https://livedoor.blogcms.jp/atom/blog/' + encodeURIComponent(blogId) + '/article';
+}
 
 function escapeXml(value) {
   return String(value ?? '')
@@ -49,11 +52,11 @@ function createWsseHeader(username, apiKey) {
     '", Created="' + created + '"';
 }
 
-function buildEntry(post, username) {
+function buildEntry(post, username, blogId) {
   const now = new Date().toISOString();
   const html = buildHtml(post).replace(/\]\]>/g, ']]]]><![CDATA[>');
   const category = post.category_name
-    ? '\n  <category scheme="http://livedoor.blogcms.jp/blog/' + BLOG_ID + '/category" term="' + escapeXml(post.category_name) + '" />'
+    ? '\n  <category scheme="http://livedoor.blogcms.jp/blog/' + encodeURIComponent(blogId) + '/category" term="' + escapeXml(post.category_name) + '" />'
     : '';
 
   return '<entry xmlns="http://www.w3.org/2005/Atom" ' +
@@ -87,7 +90,36 @@ async function main() {
     throw new Error('post.yml の記事データが不正です');
   }
 
-  const response = await fetch(API_URL, {
+  const authHeaders = () => ({
+    Authorization: 'WSSE profile="UsernameToken"',
+    'X-WSSE': createWsseHeader(user, apiKey),
+    Accept: 'application/atom+xml'
+  });
+  const candidates = [...new Set([process.env.LD_BLOG_ID, DEFAULT_BLOG_ID, user].filter(Boolean))];
+  let blogId;
+  let apiUrl;
+
+  for (const candidate of candidates) {
+    const probe = await fetch(blogApiUrl(candidate), { method: 'GET', headers: authHeaders() });
+    const probeText = await probe.text();
+    if (probe.status === 401) {
+      throw new Error('livedoor API認証に失敗しました。LD_USERとAtomPub用パスワードを確認してください');
+    }
+    if ([200, 204, 405].includes(probe.status)) {
+      blogId = candidate;
+      apiUrl = blogApiUrl(candidate);
+      console.log('使用するlivedoorブログID:', candidate);
+      break;
+    }
+    if (probe.status !== 404) {
+      throw new Error('livedoorブログID確認失敗 (HTTP ' + probe.status + '): ' + probeText.slice(0, 500));
+    }
+  }
+
+  if (!apiUrl) {
+    throw new Error('livedoor APIでブログを見つけられませんでした。LD_BLOG_IDに管理画面のブログIDを設定してください');
+  }
+  const response = await fetch(apiUrl, {
     method: 'POST',
     headers: {
       Authorization: 'WSSE profile="UsernameToken"',
@@ -95,7 +127,7 @@ async function main() {
       'Content-Type': 'application/atom+xml;type=entry; charset=utf-8',
       Accept: 'application/atom+xml'
     },
-    body: buildEntry(post, user)
+    body: buildEntry(post, user, blogId)
   });
   const responseText = await response.text();
 
