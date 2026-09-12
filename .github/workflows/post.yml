@@ -1,55 +1,34 @@
-title_ja: "ブログ自動生成AIの紹介"
+name: Auto Livedoor Beetle Blog
 
-image:
-  url: "https://example.com/blog_icon.jpg"
-  alt_ja: "ブログ自動生成AIの紹介"
-  alt_en: "Introduction to Blog Generation AI"
-  alt_es: "Introducción a la IA de generación de blogs"
-  alt_ko: "블로그 생성 AI 소개"
+on:
+  schedule:
+    - cron: "0 9 * * *"   # 毎日9時に投稿（JST）
+  workflow_dispatch:
 
-body_ja:
-  - section_title: "ブログ自動生成AIとは"
-    content: |
-      最近は、空冷ビートルの整備や走行記録を残すために、ブログ自動生成AIを活用しています。
-      毎日書くのは意外と大変ですが、AIが下書きを作ってくれることで、記録のハードルがぐっと下がりました。
+jobs:
+  post:
+    runs-on: ubuntu-latest
 
-  - section_title: "藤岡市での旧車生活とAIの相性"
-    content: |
-      群馬県藤岡市は山道・農道・市街地が混在しており、空冷ビートルにとって負荷の変化が大きい地域です。
-      こうした環境で起きた出来事を記録する際、AIが文章の骨格を作ってくれるので、後から自分の感想を足すだけで記事が完成します。
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  - section_title: "AIを使うメリット"
-    content: |
-      ・整備記録のテンプレ化が簡単  
-      ・旅の記録が写真からすぐ作れる  
-      ・文章の流れを自動で整えてくれる  
-      ・多言語化が自然にできる  
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-  - section_title: "具体的な使い方"
-    content: |
-      テーマを指定すると、関連する情報をまとめて文章化してくれます。
-      私の場合は「キャブ調整」「農道での振動」「山道の負荷」などを入力して下書きを作っています。
+      - name: Install deps
+        run: npm install node-fetch js-yaml openai
 
-  - section_title: "注意していること"
-    content: |
-      最終的な仕上げは必ず自分で行います。
-      空冷ビートルの音や匂い、走りの感触などは、やはり自分の言葉で書く方が伝わります。
+      - name: Generate post.yml (OpenAI)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node generate-post.js
 
-  - section_title: "まとめ"
-    content: |
-      ブログ自動生成AIは、旧車ブログとの相性がとても良いと感じています。
-      記録の継続が楽になり、藤岡市でのビートル生活をより深く残せるようになりました。
-
-  - section_title: "関連リンク"
-    content: |
-      空冷ビートルのキャブ調整, 農道での振動対策, 山道走行のポイント
-
-body_en:
-  - section_title: "Introduction"
-    content: |
-      I use blog generation AI to help document my daily life with an air‑cooled Beetle in Fujioka City.
-      It creates structured drafts, making it easier to record maintenance and driving experiences.
-
-  - section_title: "Driving Environment in Fujioka"
-    content: |
-      Fujioka has mountain roads, farm paths, and busy streets
+      - name: Post to Livedoor
+        env:
+          LD_USER: ${{ secrets.LD_USER }}
+          LD_PASSWORD: ${{ secrets.LD_PASSWORD }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node steemit-to-livedoor.js
