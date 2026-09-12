@@ -27,6 +27,11 @@ function escapeHtml(value) {
 
 function buildHtml(post) {
   let html = '';
+  if (post.image_url) {
+    const src = escapeHtml(post.image_url);
+    const alt = escapeHtml(post.image_alt || post.title_ja);
+    html += '<figure><img src="' + src + '" alt="' + alt + '" style="max-width:100%;height:auto;" /><figcaption>今日の一枚</figcaption></figure>';
+  }
   for (const sec of post.body_ja) {
     html += '<h3>' + escapeHtml(sec.section_title) + '</h3>';
     html += '<p>' + escapeHtml(sec.content).replace(/\n/g, '<br>') + '</p>';
