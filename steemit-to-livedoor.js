@@ -91,12 +91,15 @@ async function loginAndPost(post) {
   await browser.close();
 }
 
-// メイン
 async function main() {
   const raw = fs.readFileSync("post.yml", "utf8");
   const post = JSON.parse(raw);
 
-  await loginAndPost(post);
+  const user = process.env.LD_USER;
+  const pass = process.env.LD_PASSWORD;
+
+  await loginAndPost(user, pass, post);
 }
+
 
 main();
