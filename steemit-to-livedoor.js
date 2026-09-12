@@ -1,7 +1,14 @@
 import fs from "fs";
 import fetch from "node-fetch";
 
+const BLOG_ID = "beetle_life_jp_blog";  // ← あなたのブログIDを固定
+
+// ===============================
+// Livedoor ログイン処理
+// ===============================
 async function loginLivedoor(user, pass) {
+  console.log("ログイン開始…");
+
   const res = await fetch("https://livedoor.blogcms.jp/login", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -9,25 +16,45 @@ async function loginLivedoor(user, pass) {
   });
 
   const cookies = res.headers.get("set-cookie");
-  if (!cookies) throw new Error("ログイン失敗（Cookieなし）");
+
+  if (!cookies) {
+    console.error("ログイン失敗（Cookieなし）");
+    throw new Error("ログイン失敗");
+  }
+
+  console.log("ログイン成功");
   return cookies;
 }
 
+// ===============================
+// images.txt からランダムに1枚選ぶ
+// ===============================
 function pickImage() {
+  console.log("画像選択開始…");
+
   const list = fs.readFileSync("images.txt", "utf8")
     .split("\n")
     .map(x => x.trim())
     .filter(x => x.length > 0);
 
-  for (let i = list.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [list[i], list[j]] = [list[j], list[i]];
+  console.log("画像枚数:", list.length);
+
+  if (list.length === 0) {
+    throw new Error("images.txt が空です");
   }
 
-  return list[Math.floor(Math.random() * list.length)];
+  const selected = list[Math.floor(Math.random() * list.length)];
+  console.log("選択された画像:", selected);
+
+  return selected;
 }
 
+// ===============================
+// HTML生成
+// ===============================
 function buildHtmlMulti(post) {
+  console.log("HTML生成開始…");
+
   let html = "";
 
   const img = pickImage();
@@ -45,10 +72,16 @@ function buildHtmlMulti(post) {
     html += `<p>${sec.content.replace(/\n/g, "<br>")}</p>`;
   }
 
+  console.log("HTML生成完了");
   return html;
 }
 
+// ===============================
+// Livedoor 投稿処理（ブログID固定版）
+// ===============================
 async function postToLivedoor(cookies, post) {
+  console.log("投稿処理開始…");
+
   const html = buildHtmlMulti(post);
 
   const payload = new URLSearchParams({
@@ -57,7 +90,12 @@ async function postToLivedoor(cookies, post) {
     publish: "1"
   });
 
-  const res = await fetch("https://livedoor.blogcms.jp/blog/post", {
+  // ★ 投稿先ブログを強制指定 ★
+  const url = `https://livedoor.blogcms.jp/blog/${BLOG_ID}/post`;
+
+  console.log("投稿URL:", url);
+
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -66,17 +104,34 @@ async function postToLivedoor(cookies, post) {
     body: payload.toString()
   });
 
+  console.log("投稿レスポンス:", res.status);
+
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`投稿失敗: ${res.status} ${res.statusText}\n${text}`);
+    console.error("投稿失敗詳細:", text);
+    throw new Error(`投稿失敗: ${res.status}`);
   }
 
   console.log("Livedoor 投稿成功:", post.title_ja);
 }
 
+// ===============================
+// メイン処理
+// ===============================
 async function main() {
+  console.log("post.yml 読み込み開始…");
+
   const raw = fs.readFileSync("post.yml", "utf8");
-  const post = JSON.parse(raw);
+
+  let post;
+  try {
+    post = JSON.parse(raw);
+  } catch (e) {
+    console.error("post.yml JSONパース失敗:", e.message);
+    throw e;
+  }
+
+  console.log("post.yml 読み込み成功:", post.title_ja);
 
   const cookies = await loginLivedoor(process.env.LD_USER, process.env.LD_PASSWORD);
   await postToLivedoor(cookies, post);
