@@ -50,10 +50,11 @@ async function loginAndPost(user, pass, post) {
   });
 
   // 4. 投稿フォーム入力
-  await page.type('input[name="title"]', post.title_ja);
+  await page.type('#title', post.title_ja);
 
   const html = buildHtml(post);
-  await page.type('textarea[name="body"]', html);
+  await page.type('#body', html);
+
 
   // カテゴリ選択（存在しない場合はスキップ）
   if (post.category_name) {
