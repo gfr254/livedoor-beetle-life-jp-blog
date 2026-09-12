@@ -91,6 +91,7 @@ async function postToLivedoor(cookies, post) {
     title: post.title_ja,
     body: html,
     publish: "1"
+    category: "1"   // ← これを戻す
   });
 
   const url = `https://livedoor.blogcms.jp/blog/${BLOG_ID}/post`;
