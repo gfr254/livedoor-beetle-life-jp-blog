@@ -6,7 +6,7 @@ const client = new OpenAI({
 });
 
 // ===============================
-// 日替わりタイトル（藤岡市＋周辺地域）
+// 日替わりタイトル
 // ===============================
 const TITLES_JA = [
   "藤岡市から神流町へ抜ける山道で空冷ビートルが見せた本当の走り",
@@ -39,7 +39,7 @@ const TITLES_EN = [
 ];
 
 // ===============================
-// 藤岡市＋周辺地域の道路環境（日替わり）
+// 地域文脈
 // ===============================
 const AREA_CONTEXT_JA = [
   "藤岡市の山道から神流町方面へ抜けるルートは急勾配が続き、空冷ビートルには負荷がかかります。特に冬場は路面温度が低く、燃調の変化が顕著に現れます。",
@@ -59,16 +59,10 @@ const AREA_CONTEXT_EN = [
   "The valley route in Kanna has large temperature differences, making carburetor behavior unstable. Fuel mixture quirks become obvious on uphill sections."
 ];
 
-// ===============================
-// ランダム選択
-// ===============================
 function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// ===============================
-// メイン生成処理
-// ===============================
 async function generatePost() {
   const title_ja = pick(TITLES_JA);
   const title_en = pick(TITLES_EN);
@@ -83,37 +77,27 @@ async function generatePost() {
 - 日本語と英語の本文をどちらも充実させる（各400〜700文字）
 - 藤岡市＋周辺地域（高崎市・前橋市・神流町・上野村）を自然に含める
 - 整備・トラブル・旅の体験談を毎日ランダム生成
-- 冬・渋滞・山道・農道などの道路環境を自然に織り込む
-- タイトルに【】を絶対に付けない（自然な文章タイトル）
-- 繰り返し表現は禁止
+- タイトルに【】を付けない
 - JSON は必ずパース可能な形式で出力する
-
-出力形式：
 
 {
   "title_ja": "${title_ja}",
   "title_en": "${title_en}",
 
-  "image": {
-    "url": "https://source.unsplash.com/featured/?volkswagen,beetle",
-    "alt_ja": "${title_ja}",
-    "alt_en": "${title_en}"
-  },
-
   "body_ja": [
     { "section_title": "導入", "content": "藤岡市で空冷ビートルと暮らす日々は、整備とトラブルの連続です。今日のテーマ『${title_ja}』は、まさにその生活の中で起きた出来事です。" },
     { "section_title": "藤岡市と周辺地域の走行環境", "content": "${area_ja}" },
     { "section_title": "具体的な体験談", "content": "今日の走行中、${title_ja}に関連する症状が現れました。エンジンの反応が鈍く、加速時に息継ぎのような感覚がありました。帰宅後に点検すると、プラグの汚れやキャブの微妙なズレが原因であることが判明し、整備後は見違えるほど走りが改善しました。" },
-    { "section_title": "学んだこと", "content": "藤岡市や周辺地域の道路環境は、空冷車にとって負荷が大きく、日々の整備が走りに直結します。特に冬場や渋滞路では、燃調やプラグの状態が顕著に影響します。" },
-    { "section_title": "まとめ", "content": "${title_ja}は旧車生活を支える重要なポイントであり、今後も定期的に点検していきたい整備項目です。" }
+    { "section_title": "学んだこと", "content": "藤岡市や周辺地域の道路環境は、空冷車にとって負荷が大きく、日々の整備が走りに直結します。" },
+    { "section_title": "まとめ", "content": "${title_ja}は旧車生活を支える重要なポイントです。" }
   ],
 
   "body_en": [
     { "section_title": "Introduction", "content": "Living with an air‑cooled Beetle in Fujioka means constant maintenance and occasional troubleshooting. Today's theme, '${title_en}', comes directly from real driving experiences." },
     { "section_title": "Driving Environment", "content": "${area_en}" },
-    { "section_title": "Experience", "content": "During today's drive, I noticed symptoms related to '${title_en}'. The engine felt sluggish, and acceleration had slight hesitation. After returning home, I inspected the spark plugs and carburetor, discovering minor fouling and misalignment. Once cleaned and adjusted, the Beetle regained smooth and powerful performance." },
-    { "section_title": "What I Learned", "content": "Fujioka and its surrounding areas place heavy load on air‑cooled engines. Cold mornings, steep gradients, and urban congestion all influence fuel mixture and spark plug behavior. Regular maintenance is essential for stable performance." },
-    { "section_title": "Summary", "content": "'${title_en}' is a key part of keeping an air‑cooled Beetle healthy, especially in diverse driving environments like Fujioka." }
+    { "section_title": "Experience", "content": "During today's drive, I noticed symptoms related to '${title_en}'. The engine felt sluggish, and acceleration had slight hesitation. After returning home, I inspected the spark plugs and carburetor, discovering minor fouling and misalignment." },
+    { "section_title": "What I Learned", "content": "Fujioka and its surrounding areas place heavy load on air‑cooled engines. Cold mornings, steep gradients, and urban congestion all influence fuel mixture and spark plug behavior." },
+    { "section_title": "Summary", "content": "'${title_en}' is a key part of keeping an air‑cooled Beetle healthy." }
   ]
 }
 `;

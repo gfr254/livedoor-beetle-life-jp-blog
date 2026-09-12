@@ -18,7 +18,7 @@ async function loginLivedoor(user, pass) {
 }
 
 // ===============================
-// 画像を image.txt からランダムに選ぶ
+// image.txt からランダムに1枚選ぶ
 // ===============================
 function pickImage() {
   const list = fs.readFileSync("image.txt", "utf8")
@@ -30,31 +30,27 @@ function pickImage() {
 }
 
 // ===============================
-// HTML生成（日本語＋英語＋画像）
+// HTML生成
 // ===============================
 function buildHtmlMulti(post) {
   let html = "";
 
-  // 画像（image.txt からランダム）
+  // 画像
   const img = pickImage();
   html += `<p><img src="${img}" alt="${post.title_ja}"></p>`;
 
   // 日本語
-  if (Array.isArray(post.body_ja)) {
-    html += "<h2>🇯🇵 日本語</h2>";
-    for (const sec of post.body_ja) {
-      html += `<h3>${sec.section_title}</h3>`;
-      html += `<p>${(sec.content || "").replace(/\n/g, "<br>")}</p>`;
-    }
+  html += "<h2>🇯🇵 日本語</h2>";
+  for (const sec of post.body_ja) {
+    html += `<h3>${sec.section_title}</h3>`;
+    html += `<p>${sec.content.replace(/\n/g, "<br>")}</p>`;
   }
 
   // 英語
-  if (Array.isArray(post.body_en)) {
-    html += "<h2>🇺🇸 English</h2>";
-    for (const sec of post.body_en) {
-      html += `<h3>${sec.section_title}</h3>`;
-      html += `<p>${(sec.content || "").replace(/\n/g, "<br>")}</p>`;
-    }
+  html += "<h2>🇺🇸 English</h2>";
+  for (const sec of post.body_en) {
+    html += `<h3>${sec.section_title}</h3>`;
+    html += `<p>${sec.content.replace(/\n/g, "<br>")}</p>`;
   }
 
   return html;
