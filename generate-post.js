@@ -38,46 +38,25 @@ const TITLES_EN = [
   "Small troubles on the Fujioka–Ueno mountain pass and how I solved them"
 ];
 
-const TITLES_ES = [
-  "El rendimiento del Escarabajo en la ruta montañosa de Fujioka a Kanna",
-  "Lo que aprendí conduciendo por los caminos forestales de Ueno",
-  "Problemas de motor en la ruta del valle Fujioka–Kanna y cómo los resolví",
-  "Cambios en el ralentí del Escarabajo en el tráfico hacia Takasaki",
-  "Por qué el ajuste del carburador fue clave al conducir por Maebashi",
-  "Por qué disminuyó la aceleración en la Ruta 17 de Takasaki",
-  "Arranques inestables del Escarabajo en las frías mañanas de Fujioka",
-  "Cómo el enfriamiento por radiación en Maebashi afectó el carburador",
-  "El impacto del frío matutino de Takasaki en las bujías",
-  "Descubriendo el encanto del Escarabajo en los caminos forestales de Ueno",
-  "Particularidades de la mezcla de combustible en el valle de Kanna",
-  "Pequeños problemas en el paso montañoso Fujioka–Ueno y cómo los solucioné"
-];
-
-const TITLES_KO = [
-  "후지오카에서 칸나로 이어지는 산길에서 비틀이 보여준 진짜 주행력",
-  "우에노 마을 임도에서 깨달은 공랭 비틀 정비 포인트",
-  "후지오카–칸나 계곡 루트에서 발생한 엔진 문제와 해결 방법",
-  "후지오카에서 다카사키로 가는 정체 구간에서 느낀 아이들링 변화",
-  "마에바시 시가지를 달리며 깨달은 카브 조정의 중요성",
-  "다카사키 17번 도로에서 가속이 둔해진 이유",
-  "후지오카의 겨울 아침 추위로 비틀 시동이 불안정해진 날",
-  "마에바시의 복사 냉각이 카브 반응에 미친 영향",
-  "다카사키 아침 추위가 플러그 성능에 미친 영향",
-  "우에노 마을 임도 드라이브에서 느낀 비틀의 매력",
-  "칸나 계곡을 달리며 발견한 연료 혼합의 특징",
-  "후지오카–우에노 고갯길에서 발생한 작은 문제와 해결"
-];
-
 // ===============================
 // 藤岡市＋周辺地域の道路環境（日替わり）
 // ===============================
-const AREA_CONTEXT = [
-  "藤岡市の山道から神流町方面へ抜けるルートは急勾配が続き、空冷ビートルには負荷がかかります。",
-  "藤岡市から上野村へ向かう林道は凹凸が多く、振動トラブルが起きやすい道です。",
-  "藤岡市〜高崎市の市街地ルートは信号が多く、アイドリング調整が重要になります。",
-  "前橋市の放射冷却はキャブの反応に影響し、冬場は燃調が不安定になりやすいです。",
-  "高崎市の朝の冷え込みはプラグの状態に影響し、始動性が変わります。",
-  "神流町の渓谷沿いは気温差が大きく、キャブの反応が変わりやすい環境です。"
+const AREA_CONTEXT_JA = [
+  "藤岡市の山道から神流町方面へ抜けるルートは急勾配が続き、空冷ビートルには負荷がかかります。特に冬場は路面温度が低く、燃調の変化が顕著に現れます。",
+  "藤岡市から上野村へ向かう林道は凹凸が多く、振動トラブルが起きやすい道です。サスペンションやマフラーの緩みが出やすく、整備の重要性を感じます。",
+  "藤岡市〜高崎市の市街地ルートは信号が多く、アイドリング調整が走りに直結します。渋滞時のエンジン温度管理も欠かせません。",
+  "前橋市の放射冷却はキャブの反応に影響し、冬場は燃焼状態が不安定になりやすいです。朝の始動性が大きく変わります。",
+  "高崎市の朝の冷え込みはプラグの状態に影響し、加速時の息継ぎが起きやすくなります。",
+  "神流町の渓谷沿いは気温差が大きく、キャブの反応が変わりやすい環境です。上り坂では燃調の癖が顕著に出ます。"
+];
+
+const AREA_CONTEXT_EN = [
+  "The mountain road from Fujioka to Kanna has steep gradients that put heavy load on an air‑cooled Beetle. In winter, low road temperatures make fuel mixture changes more noticeable.",
+  "The forest road toward Ueno Village is full of bumps, making vibration‑related issues more likely. Suspension and exhaust looseness often appear on this route.",
+  "The urban route between Fujioka and Takasaki has many traffic lights, making idle tuning essential. Engine temperature control becomes important during congestion.",
+  "Radiative cooling in Maebashi affects carburetor response, especially in winter. Morning engine starts can vary significantly.",
+  "Takasaki’s cold mornings affect spark plug performance, often causing hesitation during acceleration.",
+  "The valley route in Kanna has large temperature differences, making carburetor behavior unstable. Fuel mixture quirks become obvious on uphill sections."
 ];
 
 // ===============================
@@ -93,18 +72,19 @@ function pick(arr) {
 async function generatePost() {
   const title_ja = pick(TITLES_JA);
   const title_en = pick(TITLES_EN);
-  const title_es = pick(TITLES_ES);
-  const title_ko = pick(TITLES_KO);
-  const areaContext = pick(AREA_CONTEXT);
+  const area_ja = pick(AREA_CONTEXT_JA);
+  const area_en = pick(AREA_CONTEXT_EN);
 
   const prompt = `
 あなたは「群馬県藤岡市で空冷ビートルと暮らす旧車ブロガー」です。
 以下の構造の JSON を生成してください。
 
 必須条件：
-- 日本語・英語・スペイン語・韓国語の本文をすべて日替わりで変化させる
+- 日本語と英語の本文をどちらも充実させる（各400〜700文字）
 - 藤岡市＋周辺地域（高崎市・前橋市・神流町・上野村）を自然に含める
 - 整備・トラブル・旅の体験談を毎日ランダム生成
+- 冬・渋滞・山道・農道などの道路環境を自然に織り込む
+- タイトルに【】を絶対に付けない（自然な文章タイトル）
 - 繰り返し表現は禁止
 - JSON は必ずパース可能な形式で出力する
 
@@ -113,43 +93,27 @@ async function generatePost() {
 {
   "title_ja": "${title_ja}",
   "title_en": "${title_en}",
-  "title_es": "${title_es}",
-  "title_ko": "${title_ko}",
 
   "image": {
     "url": "https://source.unsplash.com/featured/?volkswagen,beetle",
     "alt_ja": "${title_ja}",
-    "alt_en": "${title_en}",
-    "alt_es": "${title_es}",
-    "alt_ko": "${title_ko}"
+    "alt_en": "${title_en}"
   },
 
   "body_ja": [
-    { "section_title": "導入", "content": "藤岡市で空冷ビートルと暮らす中で、${title_ja}という出来事がありました。" },
-    { "section_title": "藤岡市と周辺地域の走行環境", "content": "${areaContext}" },
-    { "section_title": "今回のテーマ", "content": "${title_ja}について詳しく解説します。" },
-    { "section_title": "具体的な体験談", "content": "今日の走行中、${title_ja}に関連するトラブルが発生し、整備を行ったところ改善しました。" },
-    { "section_title": "学んだこと", "content": "藤岡市や周辺地域の道路環境では、日々の整備が走りに直結することを改めて実感しました。" },
-    { "section_title": "まとめ", "content": "${title_ja}は旧車生活を支える重要なポイントです。" },
-    { "section_title": "関連リンク", "content": "空冷ビートルのキャブ調整, 農道での振動対策, 山道走行のポイント" }
+    { "section_title": "導入", "content": "藤岡市で空冷ビートルと暮らす日々は、整備とトラブルの連続です。今日のテーマ『${title_ja}』は、まさにその生活の中で起きた出来事です。" },
+    { "section_title": "藤岡市と周辺地域の走行環境", "content": "${area_ja}" },
+    { "section_title": "具体的な体験談", "content": "今日の走行中、${title_ja}に関連する症状が現れました。エンジンの反応が鈍く、加速時に息継ぎのような感覚がありました。帰宅後に点検すると、プラグの汚れやキャブの微妙なズレが原因であることが判明し、整備後は見違えるほど走りが改善しました。" },
+    { "section_title": "学んだこと", "content": "藤岡市や周辺地域の道路環境は、空冷車にとって負荷が大きく、日々の整備が走りに直結します。特に冬場や渋滞路では、燃調やプラグの状態が顕著に影響します。" },
+    { "section_title": "まとめ", "content": "${title_ja}は旧車生活を支える重要なポイントであり、今後も定期的に点検していきたい整備項目です。" }
   ],
 
   "body_en": [
-    { "section_title": "Introduction", "content": "While driving in Fujioka today, I experienced something related to '${title_en}'." },
-    { "section_title": "Driving Environment", "content": "Fujioka and nearby areas such as Takasaki, Maebashi, Kanna, and Ueno offer diverse conditions that affect engine behavior." },
-    { "section_title": "Insights", "content": "Today's issue related to '${title_en}' improved after maintenance." }
-  ],
-
-  "body_es": [
-    { "section_title": "Introducción", "content": "Durante la conducción de hoy en Fujioka, ocurrió algo relacionado con '${title_es}'." },
-    { "section_title": "Entorno de conducción", "content": "Fujioka y zonas cercanas como Takasaki, Maebashi, Kanna y Ueno presentan condiciones diversas que afectan el motor." },
-    { "section_title": "Conclusiones", "content": "El problema relacionado con '${title_es}' mejoró tras realizar mantenimiento." }
-  ],
-
-  "body_ko": [
-    { "section_title": "소개", "content": "오늘 후지오카 주행 중 '${title_ko}'와 관련된 일이 있었습니다." },
-    { "section_title": "주행 환경", "content": "후지오카와 다카사키, 마에바시, 칸나, 우에노 등 주변 지역은 엔진 상태에 영향을 주는 다양한 환경을 가지고 있습니다." },
-    { "section_title": "정리", "content": "오늘 '${title_ko}' 관련 문제는 정비 후 개선되었습니다." }
+    { "section_title": "Introduction", "content": "Living with an air‑cooled Beetle in Fujioka means constant maintenance and occasional troubleshooting. Today's theme, '${title_en}', comes directly from real driving experiences." },
+    { "section_title": "Driving Environment", "content": "${area_en}" },
+    { "section_title": "Experience", "content": "During today's drive, I noticed symptoms related to '${title_en}'. The engine felt sluggish, and acceleration had slight hesitation. After returning home, I inspected the spark plugs and carburetor, discovering minor fouling and misalignment. Once cleaned and adjusted, the Beetle regained smooth and powerful performance." },
+    { "section_title": "What I Learned", "content": "Fujioka and its surrounding areas place heavy load on air‑cooled engines. Cold mornings, steep gradients, and urban congestion all influence fuel mixture and spark plug behavior. Regular maintenance is essential for stable performance." },
+    { "section_title": "Summary", "content": "'${title_en}' is a key part of keeping an air‑cooled Beetle healthy, especially in diverse driving environments like Fujioka." }
   ]
 }
 `;
