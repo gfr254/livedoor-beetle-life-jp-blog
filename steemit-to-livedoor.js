@@ -22,7 +22,7 @@ function buildHtml(post) {
 }
 
 // livedoor ログイン & 投稿（完全版）
-async function loginAndPost(post) {
+async function loginAndPost(user, pass, post) {
   const browser = await puppeteer.launch({
     headless: "new",
     args: ["--no-sandbox", "--disable-setuid-sandbox"]
@@ -31,33 +31,25 @@ async function loginAndPost(post) {
   const page = await browser.newPage();
 
   // 1. ログインページへ
-  await page.goto("https://livedoor.blogcms.jp/login", { waitUntil: "networkidle2" });
+  await page.goto("https://member.livedoor.com/login/", { waitUntil: "networkidle2" });
 
   // 2. livedoor ID ログイン
-  await page.type("#livedoor_id", process.env.LD_USER);
-  await page.type("#password", process.env.LD_PASSWORD);
+  await page.type('input[name="livedoor_id"]', user);
+  await page.type('input[name="password"]', pass);
 
   await Promise.all([
-    page.click("#submit"),
+    page.click('button[type="submit"]'),
     page.waitForNavigation({ waitUntil: "networkidle2" })
   ]);
 
-  // 3. ログイン成功チェック
-  await page.type('input[name="livedoor_id"]', user);
-  await page.type('input[name="password"]', pass);
-  await page.click('button[type="submit"]');
-  await page.waitForNavigation();
-
-  
-
   console.log("🔐 ログイン成功");
 
-  // 4. 投稿ページへ
+  // 3. 投稿ページへ
   await page.goto(`https://livedoor.blogcms.jp/blog/${BLOG_ID}/post`, {
     waitUntil: "networkidle2"
   });
 
-  // 5. 投稿フォーム入力
+  // 4. 投稿フォーム入力
   await page.type('input[name="title"]', post.title_ja);
 
   const html = buildHtml(post);
@@ -72,13 +64,13 @@ async function loginAndPost(post) {
     }
   }
 
-  // 6. 投稿ボタン押下
+  // 5. 投稿ボタン押下
   await Promise.all([
     page.click('input[type="submit"]'),
     page.waitForNavigation({ waitUntil: "networkidle2" })
   ]);
 
-  // 7. 投稿成功 URL 抽出
+  // 6. 投稿成功 URL 抽出
   const finalHtml = await page.content();
   const match = finalHtml.match(/https:\/\/livedoor\.blogcms\.jp\/blog\/[^"]+/);
 
@@ -91,6 +83,7 @@ async function loginAndPost(post) {
   await browser.close();
 }
 
+// メイン
 async function main() {
   const raw = fs.readFileSync("post.yml", "utf8");
   const post = JSON.parse(raw);
@@ -100,6 +93,5 @@ async function main() {
 
   await loginAndPost(user, pass, post);
 }
-
 
 main();
