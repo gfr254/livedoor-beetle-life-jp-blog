@@ -57,7 +57,7 @@ function createWsseHeader(username, apiKey) {
     '", Created="' + created + '"';
 }
 
-function buildEntry(post, username, blogId) {
+function buildEntry(post, displayName, blogId) {
   const now = new Date().toISOString();
   const html = buildHtml(post).replace(/\]\]>/g, ']]]]><![CDATA[>');
   const category = post.category_name
@@ -70,7 +70,7 @@ function buildEntry(post, username, blogId) {
     '  <title>' + escapeXml(post.title_ja) + '</title>\n' +
     '  <updated>' + now + '</updated>\n' +
     '  <published>' + now + '</published>\n' +
-    '  <author><name>' + escapeXml(username) + '</name></author>' +
+    '  <author><name>' + escapeXml(displayName) + '</name></author>' +
     category + '\n' +
     '  <blogcms:source><blogcms:body><![CDATA[' + html + ']]></blogcms:body></blogcms:source>\n' +
     '  <app:control><app:draft>no</app:draft></app:control>\n' +
@@ -86,6 +86,7 @@ function extractArticleUrl(xml) {
 async function main() {
   const post = JSON.parse(fs.readFileSync('post.yml', 'utf8'));
   const user = process.env.LD_USER;
+  const displayName = process.env.LD_DISPLAY_NAME?.trim() || '空冷かずひろ';
   const apiKey = process.env.LD_API_KEY || process.env.LD_PASSWORD;
 
   if (!user || !apiKey) {
@@ -132,7 +133,7 @@ async function main() {
       'Content-Type': 'application/atom+xml;type=entry; charset=utf-8',
       Accept: 'application/atom+xml'
     },
-    body: buildEntry(post, user, blogId)
+    body: buildEntry(post, displayName, blogId)
   });
   const responseText = await response.text();
 
