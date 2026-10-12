@@ -77,6 +77,22 @@ function buildEntry(post, displayName, blogId) {
     '</entry>';
 }
 
+function decodeXmlText(value) {
+  return value
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(parseInt(code, 10)))
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", "\"")
+    .replaceAll("&apos;", "'")
+    .replaceAll("&amp;", "&");
+}
+
+function normalizeTitle(value) {
+  return value.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("ja");
+}
+
 function extractArticleUrl(xml) {
   const match = xml.match(/<link[^>]+rel=["']alternate["'][^>]+href=["']([^"']+)["']/i) ||
     xml.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["']alternate["']/i);
@@ -104,6 +120,7 @@ async function main() {
   const candidates = [...new Set([process.env.LD_BLOG_ID, DEFAULT_BLOG_ID, user].filter(Boolean))];
   let blogId;
   let apiUrl;
+  let articleListXml;
 
   for (const candidate of candidates) {
     const probe = await fetch(blogApiUrl(candidate), { method: 'GET', headers: authHeaders() });
@@ -111,9 +128,13 @@ async function main() {
     if (probe.status === 401) {
       throw new Error('livedoor API認証に失敗しました。LD_USERとAtomPub用パスワードを確認してください');
     }
-    if ([200, 204, 405].includes(probe.status)) {
+    if (probe.status === 200) {
+      if (!/<feed\b[^>]*>/i.test(probeText)) {
+        throw new Error("livedoor記事一覧を解析できないため、重複防止のため投稿を中止しました");
+      }
       blogId = candidate;
       apiUrl = blogApiUrl(candidate);
+      articleListXml = probeText;
       console.log('使用するlivedoorブログID:', candidate);
       break;
     }
@@ -125,6 +146,18 @@ async function main() {
   if (!apiUrl) {
     throw new Error('livedoor APIでブログを見つけられませんでした。LD_BLOG_IDに管理画面のブログIDを設定してください');
   }
+  if (!articleListXml) {
+    throw new Error("livedoor記事一覧を確認できないため、重複防止のため投稿を中止しました");
+  }
+  const existingTitles = [...articleListXml.matchAll(/<entry\b[^>]*>([\s\S]*?)<\/entry\s*>/gi)]
+    .map(([, entry]) => entry.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i)?.[1])
+    .filter(Boolean)
+    .map((title) => normalizeTitle(decodeXmlText(title)));
+  if (existingTitles.includes(normalizeTitle(post.title_ja))) {
+    console.log(JSON.stringify({ published: false, skipped: true, reason: 'duplicate_title' }));
+    return;
+  }
+
   const response = await fetch(apiUrl, {
     method: 'POST',
     headers: {
