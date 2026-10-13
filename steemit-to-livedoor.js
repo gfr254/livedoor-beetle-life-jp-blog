@@ -1,5 +1,6 @@
 import fs from 'fs';
 import crypto from 'crypto';
+import { findDuplicateArticle, parseLivedoorArticles } from './livedoor-dedupe.js';
 
 const DEFAULT_BLOG_ID = 'beetle-life-jp-blog';
 
@@ -77,22 +78,6 @@ function buildEntry(post, displayName, blogId) {
     '</entry>';
 }
 
-function decodeXmlText(value) {
-  return value
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
-    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(parseInt(code, 10)))
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", "\"")
-    .replaceAll("&apos;", "'")
-    .replaceAll("&amp;", "&");
-}
-
-function normalizeTitle(value) {
-  return value.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("ja");
-}
-
 function extractArticleUrl(xml) {
   const match = xml.match(/<link[^>]+rel=["']alternate["'][^>]+href=["']([^"']+)["']/i) ||
     xml.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["']alternate["']/i);
@@ -149,12 +134,14 @@ async function main() {
   if (!articleListXml) {
     throw new Error("livedoor記事一覧を確認できないため、重複防止のため投稿を中止しました");
   }
-  const existingTitles = [...articleListXml.matchAll(/<entry\b[^>]*>([\s\S]*?)<\/entry\s*>/gi)]
-    .map(([, entry]) => entry.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i)?.[1])
-    .filter(Boolean)
-    .map((title) => normalizeTitle(decodeXmlText(title)));
-  if (existingTitles.includes(normalizeTitle(post.title_ja))) {
-    console.log(JSON.stringify({ published: false, skipped: true, reason: 'duplicate_title' }));
+  const existingArticles = parseLivedoorArticles(articleListXml);
+  const entryCount = [...articleListXml.matchAll(/<entry\b/gi)].length;
+  if (entryCount > 0 && existingArticles.length === 0) {
+    throw new Error("livedoor記事一覧を解析できないため、重複防止のため投稿を中止しました");
+  }
+  const duplicate = findDuplicateArticle(existingArticles, { title: post.title_ja, body: buildHtml(post) });
+  if (duplicate) {
+    console.log(JSON.stringify({ published: false, skipped: true, reason: duplicate.reason }));
     return;
   }
 
