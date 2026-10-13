@@ -42,10 +42,10 @@ export function findDuplicateArticle(existingArticles, candidate) {
   const titleMatch = existingArticles.find((article) => normalizeTitle(article.title) === candidateTitle);
   if (titleMatch) return { reason: "duplicate_title", title: titleMatch.title };
   const candidateBody = normalizeBody(candidate.body);
-  if (candidateBody.length < 100) return null;
+  if (candidateBody.length < 40) return null;
   const bodyMatch = existingArticles.find((article) => {
     const body = normalizeBody(article.body);
-    return body.length >= 100 && body === candidateBody;
+    return body.length >= 40 && body === candidateBody;
   });
   return bodyMatch ? { reason: "duplicate_body", title: bodyMatch.title } : null;
 }
