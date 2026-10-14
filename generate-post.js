@@ -10,10 +10,9 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       "空冷ビートルの購入前に確認したいポイント",
       "空冷VWの維持費と部品選びの考え方",
       "空冷エンジンの日常点検と冷却の仕組み"
-    ]
-];
+    ];
 
-function pick(arr) {
+    function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 function loadImageUrls() {
@@ -55,14 +54,14 @@ async function generatePost() {
         '本文はプレーンテキストでHTMLを使わず、同じ説明の繰り返しを避けてください。',
         '',
         '{',
-        '  \"title_ja\": \"空冷ビートルの購入前に確認したい基本ポイント\",',
-        '  \"summary_ja\": \"空冷ビートルの購入を検討する人向けに、年式や車両状態によって確認する項目が変わる理由と、整備記録や専門家への確認が大切なポイントを解説します。\",',
-        '  \"body_ja\": [',
-        '    {\"section_title\":\"基礎知識\",\"content\":\"\"},',
-        '    {\"section_title\":\"確認ポイント\",\"content\":\"\"},',
-        '    {\"section_title\":\"仕組みと違い\",\"content\":\"\"},',
-        '    {\"section_title\":\"注意点\",\"content\":\"\"},',
-        '    {\"section_title\":\"まとめ\",\"content\":\"\"}',
+        '  "title_ja": "空冷ビートルの購入前に確認したい基本ポイント",',
+        '  "summary_ja": "空冷ビートルの購入を検討する人向けに、年式や車両状態で確認項目が変わる理由と、整備記録や専門家への確認が大切な点を解説します。",',
+        '  "body_ja": [',
+        '    {"section_title":"基礎知識","content":""},',
+        '    {"section_title":"確認ポイント","content":""},',
+        '    {"section_title":"仕組みと違い","content":""},',
+        '    {"section_title":"注意点","content":""},',
+        '    {"section_title":"まとめ","content":""}',
         '  ]',
         '}'
       ].join(String.fromCharCode(10));
