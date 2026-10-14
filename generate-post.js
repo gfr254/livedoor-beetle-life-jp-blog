@@ -3,13 +3,14 @@ import OpenAI from "openai";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// タイトル候補
-const TITLES_JA = [
-  "旧車イベントで見つけた空冷VWの見どころ",
-  "写真で見る空冷ビートルの年式と装備",
-  "空冷VWのエンジンルームを写真で観察する",
-  "空冷VWイベントで聞いたオーナーの工夫",
-  "販売車両の写真から読み取れる空冷VW用語"
+// 記事テーマ。タイトルは本文に合わせて毎回具体的に生成する。
+    const TOPICS_JA = [
+      "空冷ビートルのエンジン構造と基礎知識",
+      "空冷VWの年式による外観や装備の違い",
+      "空冷ビートルの購入前に確認したいポイント",
+      "空冷VWの維持費と部品選びの考え方",
+      "空冷エンジンの日常点検と冷却の仕組み"
+    ]
 ];
 
 function pick(arr) {
@@ -31,35 +32,42 @@ function isBroken(text) {
 }
 
 function validate(post) {
-  if (!post.title_ja || !Array.isArray(post.body_ja) || post.body_ja.length < 4) return false;
+  if (!post.title_ja || !post.summary_ja || !Array.isArray(post.body_ja) || post.body_ja.length !== 5) return false;
+  if (post.summary_ja.length < 80 || post.summary_ja.length > 120) return false;
   if (!post.image_url || !/^https:\/\//i.test(post.image_url)) return false;
-  if (bodyLength(post) < 260 || bodyLength(post) > 380) return false;
+  if (bodyLength(post) < 700 || bodyLength(post) > 1100) return false;
   return post.body_ja.every(section => section.section_title && !isBroken(section.content));
 }
 
 async function generatePost() {
-  const title_ja = pick(TITLES_JA);
+  const topic = pick(TOPICS_JA);
 
   const image_url = pick(loadImageUrls());
   const prompt = [
-    '出力はJSONのみ。コードブロック禁止。',
-    '旧車イベント、公開されている販売車両、部品、写真などを観察して紹介する記録記事を作ってください。筆者は現時点で空冷ビートルを所有していません。',
-    '本文全体は日本語で260〜380文字、目安は約300文字。5つのセクションを作り、各セクションは45〜80文字程度にしてください。',
-    '筆者自身の所有、運転、修理、整備の体験談を書かず、写真や公開情報から確認できる特徴、イベントで得た話、部品の見どころを中心にしてください。確認できない価格、年式、走行距離、修理費、故障原因、店舗名、地域情報は創作しないでください。',
-    '実在しない部品名、費用、正確な数値、危険な整備手順を断定しないでください。本文はプレーンテキストで、HTMLは使わないでください。',
-    '',
-    '{',
-    '  \"title_ja\": \"' + title_ja + '\",',
-    '  \"body_ja\": [',
-    '    {\"section_title\":\"導入\",\"content\":\"\"},',
-    '    {\"section_title\":\"走行中の変化\",\"content\":\"\"},',
-    '    {\"section_title\":\"気づいた原因\",\"content\":\"\"},',
-    '    {\"section_title\":\"点検と対処\",\"content\":\"\"},',
-    '    {\"section_title\":\"まとめ\",\"content\":\"\"}',
-    '  ]',
-    '}'
-  ].join(String.fromCharCode(10));
-  const res = await client.chat.completions.create({
+        '出力はJSONのみ。コードブロック禁止。',
+        '記事テーマ：' + topic,
+        '空冷ビートル／空冷VWについて、読者の具体的な疑問に答える日本語の解説記事を作ってください。筆者本人の所有・運転・修理・イベント参加経験を創作しないでください。',
+        '画像URLは装飾用であり画像の中身を確認できていません。写真、車両、人物、イベントについて見たと断定しないでください。与えられていない地域、店舗、販売情報も作らないでください。',
+        '年式・仕様差がある情報は一律に断定せず、車台番号や車種ごとに異なることを明記してください。確認できない数値、価格、故障原因、整備手順は作らず、該当車両の整備資料で確認するよう案内してください。',
+        '検索する人が得られる答えを冒頭で簡潔に示し、主キーワード「空冷ビートル」または「空冷VW」をタイトルと要約に自然に含めてください。キーワードの詰め込みは禁止です。',
+        'title_jaは本文に合わせた固有の具体的なタイトル（日本語25〜38文字を目安）にしてください。summary_jaは検索結果用の自然な要約（日本語80〜120文字）にしてください。',
+        '本文は700〜1100文字、5つのセクションに分け、各セクションを十分に説明してください。体験談や確認できない事実で水増しせず、用語の説明、仕組み、確認ポイント、注意点を読者向けに具体化してください。',
+        '本文はプレーンテキストでHTMLを使わず、同じ説明の繰り返しを避けてください。',
+        '',
+        '{',
+        '  \"title_ja\": \"空冷ビートルの購入前に確認したい基本ポイント\",',
+        '  \"summary_ja\": \"空冷ビートルの購入を検討する人向けに、年式や車両状態によって確認する項目が変わる理由と、整備記録や専門家への確認が大切なポイントを解説します。\",',
+        '  \"body_ja\": [',
+        '    {\"section_title\":\"基礎知識\",\"content\":\"\"},',
+        '    {\"section_title\":\"確認ポイント\",\"content\":\"\"},',
+        '    {\"section_title\":\"仕組みと違い\",\"content\":\"\"},',
+        '    {\"section_title\":\"注意点\",\"content\":\"\"},',
+        '    {\"section_title\":\"まとめ\",\"content\":\"\"}',
+        '  ]',
+        '}'
+      ].join(String.fromCharCode(10));
+
+      const res = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       { role: "system", content: "JSONのみ出力。コードブロック禁止。" },
