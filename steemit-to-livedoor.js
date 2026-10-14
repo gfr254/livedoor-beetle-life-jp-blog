@@ -1,6 +1,6 @@
 import fs from 'fs';
 import crypto from 'crypto';
-import { findDuplicateArticle, parseLivedoorArticles } from './livedoor-dedupe.js';
+import { findDuplicateArticle, makeUniqueTitle, parseLivedoorArticles } from './livedoor-dedupe.js';
 
 const DEFAULT_BLOG_ID = 'beetle-life-jp-blog';
 
@@ -140,10 +140,16 @@ async function main() {
     throw new Error("livedoor記事一覧を解析できないため、重複防止のため投稿を中止しました");
   }
   const duplicate = findDuplicateArticle(existingArticles, { title: post.title_ja, body: buildHtml(post) });
-  if (duplicate) {
-    console.log(JSON.stringify({ published: false, skipped: true, reason: duplicate.reason }));
-    return;
-  }
+      if (duplicate?.reason === 'duplicate_body') {
+        console.log(JSON.stringify({ published: false, skipped: true, reason: duplicate.reason }));
+        return;
+      }
+      if (duplicate?.reason === 'duplicate_title') {
+        const originalTitle = post.title_ja;
+        post.title_ja = makeUniqueTitle(existingArticles, originalTitle);
+        if (post.image_alt === originalTitle) post.image_alt = post.title_ja;
+        console.log('記事本文は重複していないため、タイトルを変更します:', post.title_ja);
+      }
 
   const response = await fetch(apiUrl, {
     method: 'POST',
