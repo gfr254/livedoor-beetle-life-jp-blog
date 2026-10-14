@@ -2,7 +2,7 @@ name: Auto Livedoor Beetle Blog
 
 on:
   schedule:
-    - cron: "0 9 * * *"   # 毎日9時に投稿（JST）
+    - cron: "0 9 * * 1,3,5"   # 毎日9時に投稿（JST）
   workflow_dispatch:
 
 jobs:
