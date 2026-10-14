@@ -37,15 +37,32 @@ export function parseLivedoorArticles(feedXml) {
 }
 
 export function findDuplicateArticle(existingArticles, candidate) {
-  const candidateTitle = normalizeTitle(candidate.title);
-  if (!candidateTitle) throw new Error("Candidate article title is required");
-  const titleMatch = existingArticles.find((article) => normalizeTitle(article.title) === candidateTitle);
-  if (titleMatch) return { reason: "duplicate_title", title: titleMatch.title };
-  const candidateBody = normalizeBody(candidate.body);
-  if (candidateBody.length < 40) return null;
-  const bodyMatch = existingArticles.find((article) => {
-    const body = normalizeBody(article.body);
-    return body.length >= 40 && body === candidateBody;
-  });
-  return bodyMatch ? { reason: "duplicate_body", title: bodyMatch.title } : null;
-}
+      const candidateTitle = normalizeTitle(candidate.title);
+      if (!candidateTitle) throw new Error("Candidate article title is required");
+      const candidateBody = normalizeBody(candidate.body);
+      if (candidateBody.length >= 40) {
+        const bodyMatch = existingArticles.find((article) => {
+          const body = normalizeBody(article.body);
+          return body.length >= 40 && body === candidateBody;
+        });
+        if (bodyMatch) return { reason: "duplicate_body", title: bodyMatch.title };
+      }
+      const titleMatch = existingArticles.find((article) => normalizeTitle(article.title) === candidateTitle);
+      return titleMatch ? { reason: "duplicate_title", title: titleMatch.title } : null;
+    }
+
+    export function makeUniqueTitle(existingArticles, candidateTitle) {
+      const title = String(candidateTitle ?? "").trim();
+      if (!title) throw new Error("Candidate article title is required");
+      const usedTitles = new Set(existingArticles.map((article) => normalizeTitle(article.title)));
+      if (!usedTitles.has(normalizeTitle(title))) return title;
+
+      let uniqueTitle = title + "（新しい記事）";
+      let suffix = 2;
+      while (usedTitles.has(normalizeTitle(uniqueTitle))) {
+        uniqueTitle = title + "（新しい記事 " + suffix + "）";
+        suffix += 1;
+      }
+      return uniqueTitle;
+    }
+    
