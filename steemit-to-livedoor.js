@@ -28,6 +28,7 @@ function escapeHtml(value) {
 
 function buildHtml(post) {
   let html = '';
+  if (post.summary_ja) html += '<p class=\"article-summary\">' + escapeHtml(post.summary_ja) + '</p>';
   if (post.image_url) {
     const src = escapeHtml(post.image_url);
     const alt = escapeHtml(post.image_alt || post.title_ja);
@@ -93,7 +94,7 @@ async function main() {
   if (!user || !apiKey) {
     throw new Error('LD_USER と AtomPub用パスワード（LD_API_KEY または LD_PASSWORD）をGitHub Secretsに設定してください');
   }
-  if (!post.title_ja || !Array.isArray(post.body_ja)) {
+  if (!post.title_ja || !post.summary_ja || !Array.isArray(post.body_ja)) {
     throw new Error('post.yml の記事データが不正です');
   }
 
