@@ -38,11 +38,6 @@ function buildHtml(post) {
     html += '<h3>' + escapeHtml(sec.section_title) + '</h3>';
     html += '<p>' + escapeHtml(sec.content).replace(/\n/g, '<br>') + '</p>';
   }
-  if (post.tags?.length) {
-    html += '<h3>Tags</h3><ul>';
-    for (const tag of post.tags) html += '<li>#' + escapeHtml(tag) + '</li>';
-    html += '</ul>';
-  }
   return html;
 }
 
