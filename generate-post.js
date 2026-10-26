@@ -1,7 +1,8 @@
 import fs from "fs";
 import OpenAI from "openai";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 90_000, maxRetries: 1 });
 
 // 記事テーマ。タイトルは本文に合わせて毎回具体的に生成する。
     const TOPICS_JA = [
@@ -21,27 +22,59 @@ function loadImageUrls() {
   return urls;
 }
 
-function bodyLength(post) {
-  return post.body_ja.map(section => section.content || '').join('').replace(/\s/g, '').length;
+const MIN_BODY_LENGTH = 700;
+const MAX_BODY_LENGTH = 1100;
+
+export function bodyLength(post) {
+  if (!Array.isArray(post?.body_ja)) return 0;
+  return post.body_ja
+    .map(section => typeof section?.content === "string" ? section.content : "")
+    .join("")
+    .replace(/\s/g, "")
+    .length;
 }
 
 function isBroken(text) {
-  if (!text) return true;
-  return text.includes('undefined') || text.includes('{') || text.includes('```');
+  if (typeof text !== "string" || !text.trim()) return true;
+  return text.includes("undefined") || text.includes("{") || text.includes("```");
 }
 
-function validate(post) {
-  if (!post.title_ja || !post.summary_ja || !Array.isArray(post.body_ja) || post.body_ja.length !== 5) return false;
-  if (post.summary_ja.length < 80 || post.summary_ja.length > 120) return false;
-  if (!post.image_url || !/^https:\/\//i.test(post.image_url)) return false;
-  if (bodyLength(post) < 700 || bodyLength(post) > 1100) return false;
-  return post.body_ja.every(section => section.section_title && !isBroken(section.content));
+export function validate(post) {
+  const errors = [];
+  if (!post || typeof post !== "object" || Array.isArray(post)) return ["記事データがJSONオブジェクトではありません"];
+  if (typeof post.title_ja !== "string" || !post.title_ja.trim()) errors.push("タイトルが空です");
+  if (typeof post.summary_ja !== "string") {
+    errors.push("要約がありません");
+  } else if (post.summary_ja.length < 80 || post.summary_ja.length > 120) {
+    errors.push("要約は80〜120文字の範囲外です（現在" + post.summary_ja.length + "文字）");
+  }
+  if (!Array.isArray(post.body_ja)) {
+    errors.push("本文のセクションが配列ではありません");
+  } else {
+    if (post.body_ja.length !== 5) errors.push("本文は5セクション必要です（現在" + post.body_ja.length + "）");
+    const length = bodyLength(post);
+    if (length < MIN_BODY_LENGTH || length > MAX_BODY_LENGTH) errors.push("本文は700〜1100文字の範囲外です（現在" + length + "文字）");
+    post.body_ja.forEach((section, index) => {
+      if (typeof section?.section_title !== "string" || !section.section_title.trim()) errors.push("第" + (index + 1) + "セクションの見出しがありません");
+      if (isBroken(section?.content)) errors.push("第" + (index + 1) + "セクションの本文が空または未完成です");
+    });
+  }
+  if (typeof post.image_url !== "string" || !/^https:\/\//i.test(post.image_url)) errors.push("画像URLがHTTPSではありません");
+  return errors;
 }
+
+const MAX_GENERATION_ATTEMPTS = 5;
 
 async function generatePost() {
+  const imageUrls = loadImageUrls();
+  let post = null;
+  let lastFailure = "記事を生成できませんでした";
+
+  for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
+
   const topic = pick(TOPICS_JA);
 
-  const image_url = pick(loadImageUrls());
+  const image_url = pick(imageUrls);
   const prompt = [
         '出力はJSONのみ。コードブロック禁止。',
         '記事テーマ：' + topic,
@@ -74,25 +107,35 @@ async function generatePost() {
     ],
     temperature: 0.4
   });
-
-  let jsonText = res.choices[0].message.content.trim();
-
-  // ★ コードブロック除去（必須）
-  jsonText = jsonText.replace(/```json/g, "").replace(/```/g, "").trim();
-
-  let post;
-  try {
-    post = JSON.parse(jsonText);
-    post.image_url = image_url;
-    post.image_alt = post.title_ja;
-  } catch {
-    console.log("JSON壊れ → 再生成");
-    return generatePost();
+    let jsonText = res.choices[0].message.content?.trim() || "";
+    jsonText = jsonText.replace(/```json/g, "").replace(/```/g, "").trim();
+    let candidate;
+    try {
+      candidate = JSON.parse(jsonText);
+    } catch {
+      lastFailure = "応答をJSONとして読み取れませんでした";
+      console.log("記事生成の再試行 " + attempt + "/" + MAX_GENERATION_ATTEMPTS + ": " + lastFailure);
+      continue;
+    }
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+      lastFailure = "記事データがJSONオブジェクトではありません";
+      console.log("記事生成の再試行 " + attempt + "/" + MAX_GENERATION_ATTEMPTS + ": " + lastFailure);
+      continue;
+    }
+    candidate.image_url = image_url;
+    candidate.image_alt = candidate.title_ja;
+    const errors = validate(candidate);
+    if (errors.length > 0) {
+      lastFailure = errors.join(" / ");
+      console.log("記事生成の再試行 " + attempt + "/" + MAX_GENERATION_ATTEMPTS + ": " + lastFailure);
+      continue;
+    }
+    post = candidate;
+    break;
   }
 
-  if (!validate(post)) {
-    console.log('本文が約300文字の条件を満たさないため再生成します（文字数:', bodyLength(post), '）');
-    return generatePost();
+  if (!post) {
+    throw new Error("有効な記事を" + MAX_GENERATION_ATTEMPTS + "回以内に生成できませんでした。最終理由: " + lastFailure);
   }
 
   // タグ生成
@@ -145,4 +188,7 @@ ${post.body_ja.map(s => s.content).join("\n")}
   console.log('post.ymlを生成しました:', post.title_ja, '本文:', bodyLength(post), '文字', '画像:', post.image_url);
 }
 
-generatePost();
+generatePost().catch(error => {
+  console.error("記事生成に失敗しました:", error.message);
+  process.exitCode = 1;
+});
