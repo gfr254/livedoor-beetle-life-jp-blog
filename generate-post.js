@@ -22,7 +22,7 @@ function loadImageUrls() {
   return urls;
 }
 
-const MIN_BODY_LENGTH = 700;
+const MIN_BODY_LENGTH = 500;
 const MAX_BODY_LENGTH = 1100;
 
 export function bodyLength(post) {
@@ -45,15 +45,15 @@ export function validate(post) {
   if (typeof post.title_ja !== "string" || !post.title_ja.trim()) errors.push("タイトルが空です");
   if (typeof post.summary_ja !== "string") {
     errors.push("要約がありません");
-  } else if (post.summary_ja.length < 80 || post.summary_ja.length > 120) {
-    errors.push("要約は80〜120文字の範囲外です（現在" + post.summary_ja.length + "文字）");
+  } else if (post.summary_ja.length < 50 || post.summary_ja.length > 120) {
+    errors.push("要約は50〜120文字の範囲外です（現在" + post.summary_ja.length + "文字）");
   }
   if (!Array.isArray(post.body_ja)) {
     errors.push("本文のセクションが配列ではありません");
   } else {
     if (post.body_ja.length !== 5) errors.push("本文は5セクション必要です（現在" + post.body_ja.length + "）");
     const length = bodyLength(post);
-    if (length < MIN_BODY_LENGTH || length > MAX_BODY_LENGTH) errors.push("本文は700〜1100文字の範囲外です（現在" + length + "文字）");
+    if (length < MIN_BODY_LENGTH || length > MAX_BODY_LENGTH) errors.push("本文は500〜1100文字の範囲外です（現在" + length + "文字）");
     post.body_ja.forEach((section, index) => {
       if (typeof section?.section_title !== "string" || !section.section_title.trim()) errors.push("第" + (index + 1) + "セクションの見出しがありません");
       if (isBroken(section?.content)) errors.push("第" + (index + 1) + "セクションの本文が空または未完成です");
@@ -85,8 +85,8 @@ async function generatePost() {
         '記事ごとに1つの具体的な検索意図へ絞り、購入チェック・年式確認・維持費など既存記事と同じ意図を繰り返さないでください。タイトルだけ変えた類似記事を作らず、別の疑問に答える場合だけ記事化してください。',
         attempt > 1 ? '前回の生成は検証に失敗しました。今回こそ文字数条件を必ず満たしてください。前回の問題: ' + lastFailure : '',
         '見出しは読者が確認したい項目を具体的に示し、導入で記事の答えを先に伝えてください。一般論の繰り返しや、実体験のように見せる表現で水増ししないでください。',
-        'title_jaは本文に合わせた固有の具体的なタイトル（日本語25〜38文字を目安）にしてください。summary_jaは検索結果用の自然な要約です。JavaScriptの文字数で必ず90〜105文字にしてください.',
-        '本文は全5セクション、各セクションの本文をおよそ160〜185文字、合計800〜950文字にしてください。見出しは本文の文字数に含まれません。体験談や確認できない事実で水増しせず、用語の説明、仕組み、確認ポイント、注意点を読者向けに具体化してください.',
+        'title_jaは本文に合わせた固有の具体的なタイトル（日本語25〜38文字を目安）にしてください。summary_jaは検索結果用の自然な要約です。JavaScriptの文字数で70〜100文字を目標にし、50〜120文字に収めてください.',
+        '本文は全5セクション、各セクションの本文をおよそ100〜180文字、合計500〜900文字にしてください。見出しは本文の文字数に含まれません。体験談や確認できない事実で水増しせず、用語の説明、仕組み、確認ポイント、注意点を読者向けに具体化してください.',
         '本文はプレーンテキストでHTMLを使わず、同じ説明の繰り返しを避けてください。',
         '',
         '{',
