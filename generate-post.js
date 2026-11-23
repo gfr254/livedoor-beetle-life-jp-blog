@@ -152,6 +152,116 @@ async function requestJson(messages) {
   return JSON.parse(text);
 }
 
+// 本文から機械的に要約を合成するフォールバック。
+// モデルが範囲内の要約を作れなかった場合に、本文の先頭文を拾って連結する。
+function synthesizeSummary(draft) {
+  if (typeof draft?.title_ja !== "string" || !Array.isArray(draft?.body_ja)) return null;
+
+  const sections = draft.body_ja
+    .map(s => (typeof s?.content === "string" ? s.content : ""))
+    .filter(text => text.length > 0);
+  if (!sections.length) return null;
+
+  // 各セクションの本文を文単位に分割し、先頭の文を拾う
+  const firstSentences = [];
+  for (const content of sections) {
+    const parts = content
+      .split(/(?<=[。！？])/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+    if (parts.length > 0) firstSentences.push(parts[0]);
+  }
+
+  // タイトル＋各セクション先頭文を連結して要約候補を作る
+  let summary = draft.title_ja.replace(/[。！？]+$/, "") + "。";
+  for (const s of firstSentences) {
+    const next = summary + s;
+    if (countChars(next) > SUMMARY_MAX) break;
+    summary = next;
+    if (countChars(summary) >= SUMMARY_TARGET[0]) break;
+  }
+
+  // まだ短ければ、本文全体から文を追加
+  if (countChars(summary) < SUMMARY_MIN) {
+    const allText = sections.join("");
+    const allSentences = allText
+      .split(/(?<=[。！？])/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+    for (const s of allSentences) {
+      if (summary.includes(s)) continue;
+      const next = summary + s;
+      if (countChars(next) > SUMMARY_MAX) break;
+      summary = next;
+      if (countChars(summary) >= SUMMARY_TARGET[0]) break;
+    }
+  }
+
+  const n = countChars(summary);
+  if (n >= SUMMARY_MIN && n <= SUMMARY_MAX) return summary;
+  return null;
+}
+
+// 要約が範囲外のとき、複数候補を作らせてコード側で文字数を数えて選ぶ。
+// モデルは文字数を正確に数えられないので、「当たりを引く」方式にする。
+// それでも範囲内が無ければ、本文から機械的に合成する。
+async function repairSummary(draft) {
+  const current = countChars(draft?.summary_ja);
+  if (current >= SUMMARY_MIN && current <= SUMMARY_MAX) return;
+  if (typeof draft?.title_ja !== "string" || !Array.isArray(draft?.body_ja)) return;
+
+  try {
+    const bodyText = draft.body_ja.map(s => s?.content ?? "").join("\n");
+    const result = await requestJson([
+      { role: "system", content: SYSTEM_PROMPT },
+      {
+        role: "user",
+        content: [
+          "次の記事の、検索結果に表示する要約文の候補を8個作ってください。",
+          `各候補は必ず${SUMMARY_MIN}文字以上${SUMMARY_MAX}文字以下にしてください。日本語の文字数を正確に数えてください。`,
+          "短すぎる候補は無効です。すべての候補を範囲内に収めてください。",
+          "主キーワード「空冷ビートル」または「空冷VW」を自然に含め、記事の結論と確認ポイントが分かる2文構成にしてください。",
+          '{"candidates": ["候補1", "候補2"]} の形式のJSONオブジェクトのみで返してください。',
+          "",
+          "タイトル：" + draft.title_ja,
+          "本文：",
+          bodyText
+        ].join("\n")
+      }
+    ]);
+
+    const mid = (SUMMARY_TARGET[0] + SUMMARY_TARGET[1]) / 2;
+    const valid = (Array.isArray(result?.candidates) ? result.candidates : [])
+      .filter(c => typeof c === "string" && !isBroken(c))
+      .map(c => ({ text: c.trim(), n: countChars(c) }))
+      .filter(c => c.n >= SUMMARY_MIN && c.n <= SUMMARY_MAX)
+      .sort((a, b) => Math.abs(a.n - mid) - Math.abs(b.n - mid));
+
+    if (valid.length) {
+      draft.summary_ja = valid[0].text;
+      console.log(`要約を候補から差し替えました: ${current}文字 → ${valid[0].n}文字`);
+      return;
+    }
+
+    // 候補が範囲内に無ければ、本文から機械的に合成
+    const synthesized = synthesizeSummary(draft);
+    if (synthesized) {
+      draft.summary_ja = synthesized;
+      console.log(`要約を本文から合成しました: ${current}文字 → ${countChars(synthesized)}文字`);
+    } else {
+      console.log("要約候補に範囲内のものがなく、合成も失敗しました");
+    }
+  } catch (error) {
+    console.log("要約の補正に失敗しました:", error.message);
+    // API 呼び出しが失敗しても合成でリカバーする
+    const synthesized = synthesizeSummary(draft);
+    if (synthesized) {
+      draft.summary_ja = synthesized;
+      console.log(`要約を本文から合成しました（API失敗時）: ${countChars(synthesized)}文字`);
+    }
+  }
+}
+
 async function generatePost() {
   const image_url = pick(loadImageUrls());
   const topic = pick(TOPICS_JA);
@@ -186,6 +296,7 @@ async function generatePost() {
     }
 
     draft = parsed;
+    await repairSummary(draft);
     const candidate = { ...draft, image_url, image_alt: draft.title_ja };
     errors = validate(candidate);
     if (errors.length > 0) {
